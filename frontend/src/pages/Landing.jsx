@@ -4,9 +4,19 @@ import { useState, useEffect } from 'react';
 
 const Landing = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem('token'));
+  const [userCount, setUserCount] = useState(0);
+    useEffect(() => {
+      setIsLoggedIn(!!localStorage.getItem('token'));
+      const fetchCount = async () => {
+        try {
+          const res = await fetch("http://localhost:5001/api/auth/count");
+          const data = await res.json();
+          setUserCount(data.totalUsers);
+        } catch (error) {
+          console.error("Failed to fetch user count");
+        }
+      };
+    fetchCount();
   }, []);
 
   return (
@@ -45,10 +55,21 @@ const Landing = () => {
           </div>
           <div className="flex items-center space-x-4">
             {isLoggedIn ? (
-              <Link to="/dashboard">
-                <button className="btn-primary">Dashboard</button>
-              </Link>
-            ) : (
+                <>
+                  <Link to="/dashboard">
+                    <button className="btn-primary">Dashboard</button>
+                  </Link>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      localStorage.removeItem("token");
+                      setIsLoggedIn(false);
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
               <>
                 <Link to="/login">
                   <button className="btn-secondary">Login</button>
@@ -108,7 +129,7 @@ const Landing = () => {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-[#9CA3AF]">Active Users</p>
-                <p className="text-2xl font-bold text-primary">1,234+</p>
+                <p className="text-2xl font-bold text-teal-400">{userCount}+</p>
               </div>
             </div>
           </motion.div>

@@ -29,3 +29,7 @@ app.get("/api/protected", protect, (req, res) => {
     user: req.user
   });
 });
+
+const authRoutes = require("./routes/authRoutes");
+
+app.use("/api/auth", authRoutes);
