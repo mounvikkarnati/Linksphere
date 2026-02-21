@@ -1,3 +1,4 @@
+
 const express = require("express");
 const router = express.Router();
 
@@ -8,15 +9,18 @@ const {
   getUserCount
 } = require("../controllers/authController");
 
+const protect = require("../middleware/auth"); // your middleware file name
+
+// ================= PUBLIC ROUTES =================
 router.post("/register", registerUser);
-router.post("/verify-otp", verifyOtp);
 router.post("/login", loginUser);
+router.post("/verify-otp", verifyOtp);
+
+// ================= PROTECTED ROUTES =================
+router.get("/me", protect, (req, res) => {
+  res.json(req.user);
+});
+
 router.get("/count", getUserCount);
 
 module.exports = router;
-
-const authMiddleware = require("../middleware/auth");
-
-router.get("/dashboard", authMiddleware, (req, res) => {
-  res.json({ message: "Welcome to dashboard", user: req.user });
-});
