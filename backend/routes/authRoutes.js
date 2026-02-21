@@ -14,3 +14,9 @@ router.post("/login", loginUser);
 router.get("/count", getUserCount);
 
 module.exports = router;
+
+const authMiddleware = require("../middleware/auth");
+
+router.get("/dashboard", authMiddleware, (req, res) => {
+  res.json({ message: "Welcome to dashboard", user: req.user });
+});

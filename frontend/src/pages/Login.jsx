@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext); // ✅ INSIDE component
 
   const [formData, setFormData] = useState({
     email: "",
@@ -25,9 +27,9 @@ export default function Login() {
         formData
       );
 
-      localStorage.setItem("token", res.data.token);
-
+      login(res.data.token); // store token via context
       navigate("/dashboard");
+
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }
@@ -35,13 +37,18 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
-      <form onSubmit={handleSubmit} className="glass-card p-8 w-96 space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="glass-card p-8 w-96 space-y-6"
+      >
         <h2 className="text-3xl font-bold text-center glow-text">
           Login
         </h2>
 
         {error && (
-          <p className="text-red-400 text-sm text-center">{error}</p>
+          <p className="text-red-400 text-sm text-center">
+            {error}
+          </p>
         )}
 
         <input
@@ -50,6 +57,7 @@ export default function Login() {
           placeholder="Email"
           className="input-field"
           onChange={handleChange}
+          required
         />
 
         <input
@@ -58,6 +66,7 @@ export default function Login() {
           placeholder="Password"
           className="input-field"
           onChange={handleChange}
+          required
         />
 
         <button type="submit" className="btn-primary w-full">
