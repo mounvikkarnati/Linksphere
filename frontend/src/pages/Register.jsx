@@ -21,17 +21,25 @@ export default function Register() {
     e.preventDefault();
 
     try {
-      const res = await axios.post(
-        "http://localhost:5001/api/auth/register",
-        formData
-      );
+  await axios.post(
+    "http://localhost:5001/api/auth/register",
+    formData
+  );
 
-      localStorage.setItem("token", res.data.token);
+localStorage.setItem("verifyEmail", formData.email);
 
-      navigate("/verify", { state: { email: formData.email } });
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
-    }
+
+  navigate("/verify", { state: { email: formData.email } });
+
+} catch (err) {
+  const message = err.response?.data?.message;
+
+  if (message === "Email already exists") {
+    setError("User already exists. Please login.");
+  } else {
+    setError(message || "Registration failed");
+  }
+}
   };
 
   return (

@@ -1,36 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function VerifyOtp() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const storedEmail = localStorage.getItem("verifyEmail");
 
   const [formData, setFormData] = useState({
-    email: "",
+    email: location.state?.email || storedEmail || "",
     otp: "",
   });
 
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // If no email found, redirect to register
+    if (!formData.email) {
+      navigate("/register");
+    }
+  }, [formData.email, navigate]);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({ ...formData, otp: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await axios.post(
+      await axios.post(
         "http://localhost:5001/api/auth/verify-otp",
-        formData
+        {
+          email: formData.email,
+          otp: formData.otp,
+        }
       );
 
-      setMessage(res.data.message);
+      // Remove stored email after successful verification
+      localStorage.removeItem("verifyEmail");
 
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      navigate("/login", { replace: true });
 
     } catch (err) {
       setError(err.response?.data?.message || "Verification failed");
@@ -39,26 +50,26 @@ export default function VerifyOtp() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
-      <form onSubmit={handleSubmit} className="glass-card p-8 w-96 space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="glass-card p-8 w-96 space-y-6"
+      >
         <h2 className="text-3xl font-bold text-center glow-text">
           Verify OTP
         </h2>
 
-        {message && (
-          <p className="text-green-400 text-sm text-center">{message}</p>
-        )}
+        <p className="text-sm text-gray-400 text-center">
+          OTP sent to{" "}
+          <span className="text-white font-medium">
+            {formData.email}
+          </span>
+        </p>
 
         {error && (
-          <p className="text-red-400 text-sm text-center">{error}</p>
+          <p className="text-red-400 text-sm text-center">
+            {error}
+          </p>
         )}
-
-        <input
-          type="email"
-          name="email"
-          placeholder="Enter your email"
-          className="input-field"
-          onChange={handleChange}
-        />
 
         <input
           type="text"
@@ -66,6 +77,7 @@ export default function VerifyOtp() {
           placeholder="Enter OTP"
           className="input-field"
           onChange={handleChange}
+          required
         />
 
         <button type="submit" className="btn-primary w-full">

@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
     email: {
       type: String,
       required: true,
@@ -14,12 +15,27 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+
     password: {
       type: String,
       required: true,
     },
+
+    // 🔥 OTP Fields
+    otp: {
+      type: String,
+    },
+
+    otpExpires: {
+      type: Date,
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true } // adds createdAt automatically
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("User", userSchema);
