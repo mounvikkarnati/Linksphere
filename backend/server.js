@@ -60,6 +60,28 @@ io.on("connection", (socket) => {
   socket.on("join_room", async ({ roomId }) => {
     socket.join(roomId);
   });
+// ===============================
+// TYPING INDICATOR
+// ===============================
+socket.on("typing", async ({ roomId }) => {
+  try {
+    const User = require("./models/User");
+    const user = await User.findById(socket.userId).select("username");
+
+    socket.to(roomId).emit("user_typing", {
+      userId: socket.userId,
+      username: user.username
+    });
+  } catch (err) {
+    console.error("Typing error:", err);
+  }
+});
+
+socket.on("stop_typing", ({ roomId }) => {
+  socket.to(roomId).emit("user_stop_typing", {
+    userId: socket.userId
+  });
+});
 
   socket.on("send_message", async ({ roomId, content }) => {
     try {

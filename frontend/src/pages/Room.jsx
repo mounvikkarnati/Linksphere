@@ -16,9 +16,9 @@ const Room = () => {
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
-
+  const [typingUsers, setTypingUsers] = useState([]);
   const messagesEndRef = useRef(null);
-
+  const typingTimeoutRef = useRef(null);
   // ===============================
   // INITIAL LOAD
   // ===============================
@@ -53,6 +53,20 @@ const Room = () => {
     newSocket.on('error', (error) => {
       toast.error(error.message);
     });
+   newSocket.on("user_typing", ({ userId, username }) => {
+  if (userId === user?._id) return; // 👈 ADD THIS
+
+  setTypingUsers(prev => {
+    if (prev.find(u => u.userId === userId)) return prev;
+    return [...prev, { userId, username }];
+  });
+});
+
+   newSocket.on("user_stop_typing", ({ userId }) => {
+  setTypingUsers(prev =>
+    prev.filter(u => u.userId !== userId)
+  );
+});
 
     return () => {
       newSocket.disconnect();
@@ -392,7 +406,13 @@ const handleExtendExpiry = async (days) => {
 
           <div ref={messagesEndRef} />
         </div>
-
+{typingUsers.length > 0 && (
+  <div className="px-4 pb-2">
+    <p className="text-sm text-gray-400 italic">
+      {typingUsers.map(u => u.username).join(", ")} is typing...
+    </p>
+  </div>
+)}
         {/* ================= Message Input ================= */}
         <form onSubmit={handleSendMessage} className="mt-4">
           <div className="flex space-x-2 items-center">
@@ -414,9 +434,21 @@ const handleExtendExpiry = async (days) => {
             <input
               type="text"
               value={newMessage}
-              onChange={(e) =>
-                setNewMessage(e.target.value)
-              }
+              onChange={(e) => {
+  setNewMessage(e.target.value);
+
+  if (!socket) return;
+
+  socket.emit("typing", { roomId });
+
+  if (typingTimeoutRef.current) {
+    clearTimeout(typingTimeoutRef.current);
+  }
+
+  typingTimeoutRef.current = setTimeout(() => {
+    socket.emit("stop_typing", { roomId });
+  }, 1000);
+}}
               placeholder="Type your message..."
               className="flex-1 input-field"
             />
