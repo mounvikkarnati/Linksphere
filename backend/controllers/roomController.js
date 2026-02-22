@@ -322,3 +322,30 @@ exports.uploadFileMessage = async (req, res) => {
     res.status(500).json({ message: "Upload failed" });
   }
 };
+
+exports.reactToMessage = async (req, res) => {
+  const { messageId } = req.params;
+  const { emoji } = req.body;
+
+  const message = await Message.findById(messageId);
+  if (!message) {
+    return res.status(404).json({ message: "Message not found" });
+  }
+
+  const existingReaction = message.reactions.find(
+    r => r.user.toString() === req.user._id.toString()
+  );
+
+  if (existingReaction) {
+    existingReaction.emoji = emoji; // update reaction
+  } else {
+    message.reactions.push({
+      user: req.user._id,
+      emoji
+    });
+  }
+
+  await message.save();
+
+  res.json({ success: true });
+};

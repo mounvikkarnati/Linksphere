@@ -15,6 +15,7 @@ const {
   getMessages,
   deleteRoom,
   removeMember,
+  reactToMessage,
   uploadFileMessage
 } = require("../controllers/roomController");
 
@@ -36,4 +37,10 @@ router.post(
   protect,
   upload.single("file"),
   uploadFileMessage
+);
+
+router.post(
+  "/message/:messageId/react",
+  protect,
+  reactToMessage
 );

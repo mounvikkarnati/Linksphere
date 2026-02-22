@@ -19,6 +19,7 @@ const Room = () => {
   const [typingUsers, setTypingUsers] = useState([]);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const [activeReactionMessage, setActiveReactionMessage] = useState(null);
   // ===============================
   // INITIAL LOAD
   // ===============================
@@ -213,6 +214,31 @@ const handleExtendExpiry = async (days) => {
   };
 
   // ===============================
+  // REACT TO MESSAGE
+  // ===============================
+
+  const handleReaction = async (messageId, emoji) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    await axios.post(
+      `http://localhost:5001/api/rooms/message/${messageId}/react`,
+      { emoji },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    fetchMessages(); // refresh messages
+  } catch (err) {
+    toast.error("Reaction failed");
+  }
+};
+
+
+  // ===============================
   // FILE UPLOAD
   // ===============================
   const handleFileUpload = async (e) => {
@@ -399,6 +425,36 @@ const handleExtendExpiry = async (days) => {
                   <p className="text-xs text-[#9CA3AF] text-right mt-1">
                     {formatTime(message.createdAt)}
                   </p>
+
+                  {/* Reactions */}
+                  <div className="flex gap-2 mt-1">
+                    {Object.entries(
+                      message.reactions?.reduce((acc, reaction) => {
+                        acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
+                        return acc;
+                      }, {}) || {}
+                    ).map(([emoji, count]) => (
+                      <span
+                        key={emoji}
+                        className="text-sm bg-white/10 px-2 py-1 rounded-full"
+                      >
+                        {emoji} {count}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Reaction Buttons */}
+                  <div className="flex gap-2 mt-2">
+                    {["🔥", "❤️", "😂"].map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReaction(message._id, emoji)}
+                        className="hover:scale-125 transition"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             );
