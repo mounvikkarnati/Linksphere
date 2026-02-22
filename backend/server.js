@@ -33,3 +33,7 @@ app.get("/api/protected", protect, (req, res) => {
 const authRoutes = require("./routes/authRoutes");
 
 app.use("/api/auth", authRoutes);
+
+const roomRoutes = require("./routes/roomRoutes");
+
+app.use("/api/rooms", roomRoutes);
