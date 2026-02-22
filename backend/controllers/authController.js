@@ -2,6 +2,8 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
+const crypto = require("crypto");
+const sendOtpEmail = require("../utils/sendOtpEmail"); // your existing OTP mail
 
 /* =================================
    REGISTER USER (WITH OTP)
@@ -168,6 +170,71 @@ exports.getUserCount = async (req, res) => {
     res.json({ totalUsers: count });
   } catch (error) {
     console.log("User Count Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+  return res.status(404).json({
+    message: "User does not exist. Please register first."
+  });
+}
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    user.resetOtp = otp;
+    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await user.save();
+
+    await sendOtpEmail(email, otp); // reuse existing email util
+
+    res.json({ message: "OTP sent to email" });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (
+      !user ||
+      user.resetOtp !== otp ||
+      user.resetOtpExpiry < Date.now()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Clear OTP
+    user.resetOtp = undefined;
+    user.resetOtpExpiry = undefined;
+
+    await user.save();
+
+    // Generate token (auto login)
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      message: "Login successful",
+      token
+    });
+
+  } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 };

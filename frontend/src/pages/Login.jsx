@@ -68,7 +68,12 @@ export default function Login() {
           onChange={handleChange}
           required
         />
-
+        <p
+          onClick={() => navigate("/forgot-password")}
+          className="text-sm text-primary cursor-pointer text-center"
+        >
+          Forgot Password?
+        </p>
         <button type="submit" className="btn-primary w-full">
           Login
         </button>
