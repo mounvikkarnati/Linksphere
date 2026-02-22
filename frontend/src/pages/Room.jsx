@@ -19,6 +19,7 @@ const Room = () => {
   const [typingUsers, setTypingUsers] = useState([]);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const skipScrollRef = useRef(false);
   const [activeReactionMessage, setActiveReactionMessage] = useState(null);
   // ===============================
   // INITIAL LOAD
@@ -74,10 +75,13 @@ const Room = () => {
     };
   }, [roomId]);
 
-  useEffect(() => {
+ useEffect(() => {
+  if (!skipScrollRef.current) {
     scrollToBottom();
-  }, [messages]);
+  }
 
+  skipScrollRef.current = false; // reset after update
+}, [messages]);
   // ===============================
   // FETCH USER
   // ===============================
@@ -217,9 +221,11 @@ const handleExtendExpiry = async (days) => {
   // REACT TO MESSAGE
   // ===============================
 
-  const handleReaction = async (messageId, emoji) => {
+const handleReaction = async (messageId, emoji) => {
   try {
     const token = localStorage.getItem("token");
+
+    skipScrollRef.current = true; // prevent scroll
 
     await axios.post(
       `http://localhost:5001/api/rooms/message/${messageId}/react`,
@@ -231,12 +237,13 @@ const handleExtendExpiry = async (days) => {
       }
     );
 
-    fetchMessages(); // refresh messages
+    fetchMessages();
+
   } catch (err) {
+    console.log(err.response?.data || err.message); // add this temporarily
     toast.error("Reaction failed");
   }
 };
-
 
   // ===============================
   // FILE UPLOAD
@@ -378,7 +385,7 @@ const handleExtendExpiry = async (days) => {
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex ${
+                className={`relative flex items-center ${
                   isOwnMessage ? 'justify-end' : 'justify-start'
                 }`}
               >
@@ -403,22 +410,26 @@ const handleExtendExpiry = async (days) => {
 
                   {message.fileUrl && (
                     <>
-                      {message.fileType?.startsWith("image") ? (
+                      {message.fileUrl && (
+                        <>
+                        {message.fileType?.startsWith("image") ? (
                         <img
-                          src={`http://localhost:5001${message.fileUrl}`}
-                          alt="shared"
-                          className="mt-2 rounded-lg max-w-xs"
+                        src={message.fileUrl}
+                        alt="shared"
+                        className="mt-2 rounded-lg max-w-xs"
                         />
-                      ) : (
+                        ) : (
                         <a
-                          href={`http://localhost:5001${message.fileUrl}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary underline mt-2 block"
+                        href={message.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 underline mt-2 block"
                         >
-                          📎 Download File
+                        📄 Open {message.fileName || "File"}
                         </a>
-                      )}
+                        )}
+                        </>
+                        )}
                     </>
                   )}
 
@@ -435,7 +446,7 @@ const handleExtendExpiry = async (days) => {
                       }, {}) || {}
                     ).map(([emoji, count]) => (
                       <span
-                        key={emoji}
+                        key={message._id + emoji}
                         className="text-sm bg-white/10 px-2 py-1 rounded-full"
                       >
                         {emoji} {count}
@@ -443,20 +454,62 @@ const handleExtendExpiry = async (days) => {
                     ))}
                   </div>
 
-                  {/* Reaction Buttons */}
-                  <div className="flex gap-2 mt-2">
-                    {["🔥", "❤️", "😂"].map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(message._id, emoji)}
-                        className="hover:scale-125 transition"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Emoji Picker */}
+                 {activeReactionMessage === message._id && (
+                    <div
+                      className={`
+                        absolute
+                        -top-12
+                        ${isOwnMessage ? "right-10" : "left-10"}
+                        bg-black/90
+                        backdrop-blur-md
+                        border border-white/10
+                        rounded-full
+                        px-3 py-2
+                        flex gap-3
+                        shadow-lg
+                        animate-fadeIn
+                      `}
+                    >
+                      {["🔥", "❤️", "😂", "👍", "😮","🥲","🎉","👍","👎"].map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            handleReaction(message._id, emoji);
+                            setActiveReactionMessage(null);
+                          }}
+                          className="hover:scale-125 transition-transform duration-150"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+                {/* Smiley Button */}
+                  <div className="relative inline-block group">
+                    {/* Tooltip */}
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 
+                                    bg-black text-white text-xs px-2 py-1 rounded 
+                                    opacity-0 group-hover:opacity-100 
+                                    transition duration-200 whitespace-nowrap">
+                      Reactions
+                    </span>
+
+                    {/* Button */}
+                    <button
+                      onClick={() =>
+                        setActiveReactionMessage(
+                          activeReactionMessage === message._id ? null : message._id
+                        )
+                      }
+                      className="ml-2 text-gray-400 hover:text-white transition"
+                    >
+                      😊
+                    </button>
+                  </div>
               </motion.div>
+              
             );
           })}
 
