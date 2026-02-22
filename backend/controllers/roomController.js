@@ -257,3 +257,68 @@ exports.removeMember = async (req, res) => {
   }
 };
 
+// =======================
+// EXTEND ROOM EXPIRY
+// =======================
+exports.extendRoomExpiry = async (req, res) => {
+  try {
+    const { expiresIn } = req.body; // number of days
+    const { roomId } = req.params;
+
+    if (!expiresIn || expiresIn < 0) {
+      return res.status(400).json({
+        message: "Valid expiry duration required"
+      });
+    }
+
+    const room = await Room.findOne({ roomId });
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    let newExpiry = null;
+
+    if (expiresIn > 0) {
+      newExpiry = new Date();
+      newExpiry.setDate(newExpiry.getDate() + expiresIn);
+    }
+
+    room.expiresAt = newExpiry;
+    await room.save();
+
+    res.json({
+      message: "Room expiry updated successfully",
+      expiresAt: room.expiresAt
+    });
+
+  } catch (error) {
+    console.error("Extend Expiry Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.uploadFileMessage = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const room = await Room.findOne({ roomId });
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    const message = await Message.create({
+      room: room._id,
+      sender: req.user._id,
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileType: req.file.mimetype
+    });
+
+    const populatedMessage = await message.populate("sender", "username");
+
+    res.json({ message: populatedMessage });
+
+  } catch (err) {
+    res.status(500).json({ message: "Upload failed" });
+  }
+};

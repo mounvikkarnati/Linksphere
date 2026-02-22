@@ -35,7 +35,7 @@ const roomRoutes = require("./routes/roomRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
-
+app.use("/uploads", express.static("uploads"));
 
 // 🔐 SOCKET AUTH
 io.use((socket, next) => {

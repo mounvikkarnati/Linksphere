@@ -4,6 +4,9 @@ const router = express.Router();
 const protect = require("../middleware/auth");
 const checkRoomAdmin = require("../middleware/checkRoomAdmin");
 
+const { extendRoomExpiry } = require("../controllers/roomController");
+const upload = require("../middleware/upload");
+
 const {
   createRoom,
   joinRoom,
@@ -11,7 +14,8 @@ const {
   getRoomDetails,
   getMessages,
   deleteRoom,
-  removeMember
+  removeMember,
+  uploadFileMessage
 } = require("../controllers/roomController");
 
 router.post("/create", protect, createRoom);
@@ -24,5 +28,12 @@ router.get("/:roomId/messages", protect, getMessages);
 // Admin routes
 router.delete("/:roomId", protect, checkRoomAdmin, deleteRoom);
 router.delete("/:roomId/remove/:userId", protect, checkRoomAdmin, removeMember);
-
+router.put("/:roomId/extend-expiry", protect, checkRoomAdmin, extendRoomExpiry);
 module.exports = router;
+
+router.post(
+  "/:roomId/upload",
+  protect,
+  upload.single("file"),
+  uploadFileMessage
+);

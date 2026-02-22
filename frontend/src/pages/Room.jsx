@@ -57,7 +57,6 @@ const Room = () => {
     return () => {
       newSocket.disconnect();
     };
-
   }, [roomId]);
 
   useEffect(() => {
@@ -117,7 +116,7 @@ const Room = () => {
   };
 
   // ===============================
-  // DELETE ROOM (ADMIN ONLY)
+  // DELETE ROOM
   // ===============================
   const handleDeleteRoom = async () => {
     const confirmDelete = window.confirm(
@@ -140,13 +139,10 @@ const Room = () => {
   };
 
   // ===============================
-  // REMOVE MEMBER (ADMIN ONLY)
+  // REMOVE MEMBER
   // ===============================
   const handleRemoveMember = async (userId) => {
-    const confirmRemove = window.confirm(
-      "Remove this member?"
-    );
-
+    const confirmRemove = window.confirm("Remove this member?");
     if (!confirmRemove) return;
 
     try {
@@ -167,6 +163,7 @@ const Room = () => {
   // ===============================
   const handleSendMessage = (e) => {
     e.preventDefault();
+
     if (!newMessage.trim() || !socket) return;
 
     socket.emit('send_message', {
@@ -175,6 +172,37 @@ const Room = () => {
     });
 
     setNewMessage('');
+  };
+
+  // ===============================
+  // FILE UPLOAD
+  // ===============================
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.post(
+        `http://localhost:5001/api/rooms/${roomId}/upload`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setMessages(prev => [...prev, res.data.message]);
+
+    } catch (err) {
+      toast.error("Upload failed");
+    }
   };
 
   const scrollToBottom = () => {
@@ -219,7 +247,7 @@ const Room = () => {
           {room?.isAdmin && (
             <button
               onClick={handleDeleteRoom}
-              className="mt-4 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm"
+              className="mt-4 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm w-full"
             >
               Delete Room
             </button>
@@ -277,9 +305,7 @@ const Room = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`flex ${
-                  isOwnMessage
-                    ? 'justify-end'
-                    : 'justify-start'
+                  isOwnMessage ? 'justify-end' : 'justify-start'
                 }`}
               >
                 <div
@@ -295,9 +321,32 @@ const Room = () => {
                     </p>
                   )}
 
-                  <p className="text-sm break-words">
-                    {message.content}
-                  </p>
+                  {message.content && (
+                    <p className="text-sm break-words">
+                      {message.content}
+                    </p>
+                  )}
+
+                  {message.fileUrl && (
+                    <>
+                      {message.fileType?.startsWith("image") ? (
+                        <img
+                          src={`http://localhost:5001${message.fileUrl}`}
+                          alt="shared"
+                          className="mt-2 rounded-lg max-w-xs"
+                        />
+                      ) : (
+                        <a
+                          href={`http://localhost:5001${message.fileUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline mt-2 block"
+                        >
+                          📎 Download File
+                        </a>
+                      )}
+                    </>
+                  )}
 
                   <p className="text-xs text-[#9CA3AF] text-right mt-1">
                     {formatTime(message.createdAt)}
@@ -310,8 +359,24 @@ const Room = () => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* ================= Message Input ================= */}
         <form onSubmit={handleSendMessage} className="mt-4">
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-center">
+
+            <input
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="fileInput"
+            />
+
+            <label
+              htmlFor="fileInput"
+              className="cursor-pointer bg-white/10 px-3 py-2 rounded-lg hover:bg-white/20 transition"
+            >
+              📎
+            </label>
+
             <input
               type="text"
               value={newMessage}
@@ -321,6 +386,7 @@ const Room = () => {
               placeholder="Type your message..."
               className="flex-1 input-field"
             />
+
             <button
               type="submit"
               disabled={!newMessage.trim()}
@@ -328,6 +394,7 @@ const Room = () => {
             >
               Send
             </button>
+
           </div>
         </form>
 
