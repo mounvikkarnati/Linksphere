@@ -135,6 +135,19 @@ const Landing = () => {
           </motion.div>
         </div>
       </section>
+      {/* ================= Footer ================= */}
+<footer className="relative z-10 border-t border-white/10 py-6 mt-20">
+  <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-400">
+    <p>
+      © {new Date().getFullYear()} LinkSphere. All rights reserved.
+    </p>
+    <p className="mt-2">
+      Designed and developed by{" "}
+      <span className="glow-text">Mounvik K</span> &{" "}
+      <span className="glow-text">Rohith N</span>
+    </p>
+  </div>
+</footer>
     </div>
   );
 };

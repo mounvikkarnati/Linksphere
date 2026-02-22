@@ -134,7 +134,11 @@ const Dashboard = () => {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold mb-2">
-            Welcome back, <span className="glow-text">{user?.username}</span>
+            Welcome Back, <span className="glow-text">
+              {user?.username
+                ? user.username.charAt(0).toUpperCase() + user.username.slice(1)
+                : ""}
+            </span>
           </h1>
           <p className="text-[#9CA3AF]">Your rooms are ready and waiting</p>
         </motion.div>
