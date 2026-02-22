@@ -2,28 +2,27 @@ const express = require("express");
 const router = express.Router();
 
 const protect = require("../middleware/auth");
+const checkRoomAdmin = require("../middleware/checkRoomAdmin");
 
 const {
   createRoom,
   joinRoom,
   getMyRooms,
   getRoomDetails,
-  getMessages
+  getMessages,
+  deleteRoom,
+  removeMember
 } = require("../controllers/roomController");
 
-// Create room
 router.post("/create", protect, createRoom);
-
-// Join room
 router.post("/join", protect, joinRoom);
 
-// Get all rooms for logged-in user
 router.get("/my-rooms", protect, getMyRooms);
-
-// Get single room details
 router.get("/:roomId/details", protect, getRoomDetails);
-
-// Get room messages
 router.get("/:roomId/messages", protect, getMessages);
+
+// Admin routes
+router.delete("/:roomId", protect, checkRoomAdmin, deleteRoom);
+router.delete("/:roomId/remove/:userId", protect, checkRoomAdmin, removeMember);
 
 module.exports = router;

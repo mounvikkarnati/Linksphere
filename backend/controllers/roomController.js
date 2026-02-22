@@ -2,7 +2,7 @@ const Room = require("../models/Room");
 const Message = require("../models/Message");
 const bcrypt = require("bcryptjs");
 const generateRoomId = require("../utils/generateRoomId");
-
+const sendRoomDetailsEmail = require("../utils/sendRoomDetailsEmail");
 
 // =======================
 // CREATE ROOM
@@ -47,7 +47,14 @@ exports.createRoom = async (req, res) => {
       ],
       expiresAt
     });
-
+    // Send room details email to admin
+await sendRoomDetailsEmail({
+  to: req.user.email,
+  roomName: name,
+  roomId: roomId,
+  password: password, // original password (not hashed)
+  expiresAt: expiresAt
+});
     res.status(201).json({
       message: "Room created successfully",
       roomId: room.roomId
@@ -159,16 +166,23 @@ exports.getRoomDetails = async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // Check membership
-    const isMember = room.members.find(
+    const member = room.members.find(
       m => m.user._id.toString() === req.user._id.toString()
     );
 
-    if (!isMember) {
+    if (!member) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    res.json({ room });
+    const isExpired =
+      room.expiresAt && new Date() > room.expiresAt;
+
+    res.json({
+      room,
+      isAdmin: member.role === "admin",
+      isExpired,
+      membersCount: room.members.length
+    });
 
   } catch (error) {
     console.error("Get Room Details Error:", error);
@@ -201,3 +215,45 @@ exports.getMessages = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+exports.deleteRoom = async (req, res) => {
+  try {
+    const room = req.room;
+
+    await Message.deleteMany({ room: room._id });
+    await room.deleteOne();
+
+    res.json({ message: "Room deleted successfully" });
+
+  } catch (error) {
+    console.error("Delete Room Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.removeMember = async (req, res) => {
+  try {
+    const room = req.room;
+    const { userId } = req.params;
+
+    if (req.user._id.toString() === userId) {
+      return res.status(400).json({
+        message: "Admin cannot remove themselves"
+      });
+    }
+
+    room.members = room.members.filter(
+      member => member.user.toString() !== userId
+    );
+
+    await room.save();
+
+    res.json({ message: "Member removed successfully" });
+
+  } catch (error) {
+    console.error("Remove Member Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+

@@ -50,8 +50,8 @@ const Landing = () => {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="text-2xl font-bold">
-            <span className="glow-text">B</span>
-            <span className="text-white">Chat</span>
+            <span className="glow-text">Link</span>
+            <span className="text-white">Sphere</span>
           </div>
           <div className="flex items-center space-x-4">
             {isLoggedIn ? (

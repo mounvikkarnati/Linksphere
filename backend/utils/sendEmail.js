@@ -67,7 +67,7 @@ const sendEmail = async (email, otp) => {
     <!-- Footer -->
     <div style="padding: 20px 30px; background: #fafafa; text-align: center; border-top: 1px solid #eee;">
         <p style="color: #888; font-size: 13px; line-height: 1.5; margin: 0 0 5px 0;">
-            Need help? <a href="#" style="color: #667eea; text-decoration: none; font-weight: 500;">Contact Support</a>
+            Need help? <a mailto="mounvikkarnati@gmail.com" style="color: #667eea; text-decoration: none; font-weight: 500;">Contact Support</a>
         </p>
         <p style="color: #888; font-size: 12px; line-height: 1.5; margin: 0;">
             © 2026 BChat. All rights reserved.
