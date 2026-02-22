@@ -139,6 +139,30 @@ const Room = () => {
   };
 
   // ===============================
+// EXTEND ROOM EXPIRY (ADMIN ONLY)
+// ===============================
+const handleExtendExpiry = async (days) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    await axios.put(
+      `http://localhost:5001/api/rooms/${roomId}/extend-expiry`,
+      { expiresIn: days },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    toast.success(`Room extended by ${days} days`);
+    fetchRoomDetails(); // refresh room data
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to extend room");
+  }
+};
+
+  // ===============================
   // REMOVE MEMBER
   // ===============================
   const handleRemoveMember = async (userId) => {
@@ -227,6 +251,7 @@ const Room = () => {
   return (
     <div className="min-h-screen bg-black flex">
 
+
       {/* ================= Sidebar ================= */}
       <motion.div
         initial={{ x: -300 }}
@@ -245,12 +270,21 @@ const Room = () => {
           <p className="text-sm text-[#9CA3AF] font-mono">{roomId}</p>
 
           {room?.isAdmin && (
-            <button
-              onClick={handleDeleteRoom}
-              className="mt-4 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm w-full"
-            >
-              Delete Room
-            </button>
+            <>
+              <button
+                onClick={handleDeleteRoom}
+                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm w-full"
+              >
+                Delete Room
+              </button>
+
+              <button
+                onClick={() => handleExtendExpiry(7)}
+                className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm w-full"
+              >
+                Extend 7 Days
+              </button>
+            </>
           )}
         </div>
 
