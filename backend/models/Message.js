@@ -20,7 +20,9 @@ const messageSchema = new mongoose.Schema(
       maxlength: 1000,
     },
 
+    // ✅ FILE FIELDS (Cloudinary Ready)
     fileUrl: String,
+    publicId: String,   // 👈 Added for Cloudinary delete support
     fileType: String,
     fileName: String,
     fileSize: Number,

@@ -274,6 +274,7 @@ const handleReaction = async (messageId, emoji) => {
     } catch (err) {
       toast.error("Upload failed");
     }
+    e.target.value = null;
   };
 
   const scrollToBottom = () => {
@@ -408,30 +409,33 @@ const handleReaction = async (messageId, emoji) => {
                     </p>
                   )}
 
-                  {message.fileUrl && (
-                    <>
-                      {message.fileUrl && (
-                        <>
-                        {message.fileType?.startsWith("image") ? (
-                        <img
-                        src={message.fileUrl}
-                        alt="shared"
-                        className="mt-2 rounded-lg max-w-xs"
-                        />
-                        ) : (
-                        <a
-                        href={message.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 underline mt-2 block"
-                        >
-                        📄 Open {message.fileName || "File"}
-                        </a>
-                        )}
-                        </>
-                        )}
-                    </>
-                  )}
+                  <a
+                    href={message.fileUrl}
+                    onClick={(e) => {
+                      e.preventDefault();
+
+                      fetch(message.fileUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                          const url = window.URL.createObjectURL(blob);
+
+                          const a = document.createElement("a");
+                          a.href = url;
+
+                          // ✅ Preserve correct filename with extension
+                          a.download = message.fileName;
+
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+
+                          window.URL.revokeObjectURL(url);
+                        });
+                    }}
+                    className="text-blue-400 underline mt-2 block cursor-pointer"
+                  >
+                    📄 {message.fileName}
+                  </a>
 
                   <p className="text-xs text-[#9CA3AF] text-right mt-1">
                     {formatTime(message.createdAt)}

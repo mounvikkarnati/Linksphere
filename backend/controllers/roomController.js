@@ -3,7 +3,7 @@ const Message = require("../models/Message");
 const bcrypt = require("bcryptjs");
 const generateRoomId = require("../utils/generateRoomId");
 const sendRoomDetailsEmail = require("../utils/sendRoomDetailsEmail");
-
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 // =======================
 // CREATE ROOM
 // =======================
@@ -301,24 +301,38 @@ exports.extendRoomExpiry = async (req, res) => {
 exports.uploadFileMessage = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const room = await Room.findOne({ roomId });
 
+    const room = await Room.findOne({ roomId });
     if (!room) {
       return res.status(404).json({ message: "Room not found" });
     }
 
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Upload file buffer to Cloudinary
+    const result = await uploadToCloudinary(
+  req.file.buffer,
+  req.file.originalname
+);
+
     const message = await Message.create({
       room: room._id,
       sender: req.user._id,
-      fileUrl: `/uploads/${req.file.filename}`,
-      fileType: req.file.mimetype
+      fileUrl: result.secure_url,     // CDN URL
+      publicId: result.public_id,     // Needed for delete later
+      fileType: req.file.mimetype,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
     });
 
     const populatedMessage = await message.populate("sender", "username");
 
-    res.json({ message: populatedMessage });
+    res.status(201).json({ message: populatedMessage });
 
   } catch (err) {
+    console.error("Upload Error:", err);
     res.status(500).json({ message: "Upload failed" });
   }
 };
