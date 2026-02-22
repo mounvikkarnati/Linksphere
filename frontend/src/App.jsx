@@ -5,25 +5,40 @@ import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import VerifyOtp from "./pages/VerifyOtp";
+import Room from "./pages/Room";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/verify" element={<VerifyOtp />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/login" element={<Login />} />
-      <Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  }
-/>
-    </Routes>
+    <>
+      <Toaster position="top-right" />
+
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/verify" element={<VerifyOtp />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/room/:roomId"
+          element={
+            <ProtectedRoute>
+              <Room />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 
 export default App;
-

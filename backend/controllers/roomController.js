@@ -1,11 +1,15 @@
 const Room = require("../models/Room");
+const Message = require("../models/Message");
 const bcrypt = require("bcryptjs");
 const generateRoomId = require("../utils/generateRoomId");
 
+
+// =======================
 // CREATE ROOM
+// =======================
 exports.createRoom = async (req, res) => {
   try {
-    const { name, password, expiresAt } = req.body;
+    const { name, password, expiresIn } = req.body;
 
     if (!name || !password) {
       return res.status(400).json({ message: "Name and password required" });
@@ -22,6 +26,13 @@ exports.createRoom = async (req, res) => {
       existingRoom = await Room.findOne({ roomId });
     } while (existingRoom);
 
+    let expiresAt = null;
+
+    if (expiresIn && expiresIn > 0) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresIn);
+    }
+
     const room = await Room.create({
       name,
       roomId,
@@ -31,18 +42,162 @@ exports.createRoom = async (req, res) => {
         {
           user: req.user._id,
           role: "admin",
-        },
+          joinedAt: new Date()
+        }
       ],
-      expiresAt: expiresAt || null,
+      expiresAt
     });
 
     res.status(201).json({
       message: "Room created successfully",
-      roomId: room.roomId,
+      roomId: room.roomId
     });
 
   } catch (error) {
-    console.log("Create Room Error:", error);
+    console.error("Create Room Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// =======================
+// JOIN ROOM
+// =======================
+exports.joinRoom = async (req, res) => {
+  try {
+    const { roomId, password } = req.body;
+
+    if (!roomId || !password) {
+      return res.status(400).json({ message: "Room ID and password required" });
+    }
+
+    const room = await Room.findOne({ roomId });
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Check expiry
+    if (room.expiresAt && new Date() > room.expiresAt) {
+      return res.status(400).json({ message: "Room has expired" });
+    }
+
+    const isMatch = await bcrypt.compare(password, room.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect password" });
+    }
+
+    const alreadyMember = room.members.find(
+      member => member.user.toString() === req.user._id.toString()
+    );
+
+    if (alreadyMember) {
+      return res.status(400).json({ message: "Already a member of this room" });
+    }
+
+    room.members.push({
+      user: req.user._id,
+      role: "member",
+      joinedAt: new Date()
+    });
+
+    await room.save();
+
+    res.status(200).json({ message: "Joined room successfully" });
+
+  } catch (error) {
+    console.error("Join Room Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// =======================
+// GET MY ROOMS
+// =======================
+exports.getMyRooms = async (req, res) => {
+  try {
+    const rooms = await Room.find({
+      "members.user": req.user._id
+    });
+
+    const formatted = rooms.map(room => {
+      const member = room.members.find(
+        m => m.user.toString() === req.user._id.toString()
+      );
+
+      return {
+        id: room._id,
+        name: room.name,
+        roomId: room.roomId,
+        role: member.role,
+        members: room.members.length,
+        expiresAt: room.expiresAt
+      };
+    });
+
+    res.json({ rooms: formatted });
+
+  } catch (error) {
+    console.error("Get My Rooms Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// =======================
+// GET ROOM DETAILS
+// =======================
+exports.getRoomDetails = async (req, res) => {
+  try {
+    const room = await Room.findOne({
+      roomId: req.params.roomId
+    }).populate("members.user", "username");
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Check membership
+    const isMember = room.members.find(
+      m => m.user._id.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    res.json({ room });
+
+  } catch (error) {
+    console.error("Get Room Details Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// =======================
+// GET ROOM MESSAGES
+// =======================
+exports.getMessages = async (req, res) => {
+  try {
+    const room = await Room.findOne({ roomId: req.params.roomId });
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    const messages = await Message.find({
+      room: room._id
+    })
+      .populate("sender", "username")
+      .sort({ createdAt: 1 });
+
+    res.json({ messages });
+
+  } catch (error) {
+    console.error("Get Messages Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
