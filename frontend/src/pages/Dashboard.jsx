@@ -38,7 +38,7 @@ const Dashboard = () => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/auth/me');
+      const response = await axios.get('https://linksphere-backend-k60s.onrender.com/api/auth/me');
       setUser(response.data);
     } catch (error) {
       localStorage.removeItem('token');
@@ -48,7 +48,7 @@ const Dashboard = () => {
 
   const fetchRooms = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/rooms/my-rooms');
+      const response = await axios.get('https://linksphere-backend-k60s.onrender.com/api/rooms/my-rooms');
       setRooms(response.data.rooms);
     } catch (error) {
       console.error('Failed to fetch rooms:', error);

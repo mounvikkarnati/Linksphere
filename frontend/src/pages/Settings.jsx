@@ -26,7 +26,7 @@ const Settings = () => {
   const fetchUser = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5001/api/auth/me",
+        "https://linksphere-backend-k60s.onrender.com/api/auth/me",
         {
           headers: { Authorization: `Bearer ${getToken()}` },
         }
@@ -44,7 +44,7 @@ const Settings = () => {
   const handleUsernameUpdate = async () => {
     try {
       await axios.put(
-        "http://localhost:5001/api/auth/update",
+        "https://linksphere-backend-k60s.onrender.com/api/auth/update",
         { username },
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -61,7 +61,7 @@ const Settings = () => {
   const requestEmailOtp = async () => {
     try {
       await axios.put(
-        "http://localhost:5001/api/auth/request-email-change",
+        "https://linksphere-backend-k60s.onrender.com/api/auth/request-email-change",
         { newEmail: email },
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -78,7 +78,7 @@ const Settings = () => {
   const verifyEmailOtp = async () => {
     try {
       await axios.put(
-        "http://localhost:5001/api/auth/verify-email-change",
+        "https://linksphere-backend-k60s.onrender.com/api/auth/verify-email-change",
         { otp: emailOtp },
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -97,7 +97,7 @@ const Settings = () => {
   const requestDeleteOtp = async () => {
     try {
       await axios.post(
-        "http://localhost:5001/api/auth/request-delete-account-otp",
+        "https://linksphere-backend-k60s.onrender.com/api/auth/request-delete-account-otp",
         {},
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -114,7 +114,7 @@ const Settings = () => {
   const verifyDeleteOtp = async () => {
     try {
       await axios.post(
-        "http://localhost:5001/api/auth/verify-delete-account-otp",
+        "https://linksphere-backend-k60s.onrender.com/api/auth/verify-delete-account-otp",
         { otp: deleteOtp },
         {
           headers: { Authorization: `Bearer ${getToken()}` },

@@ -22,7 +22,7 @@ export default function Register() {
 
     try {
   await axios.post(
-    "http://localhost:5001/api/auth/register",
+    "https://linksphere-backend-k60s.onrender.com/api/auth/register",
     formData
   );
 
