@@ -328,6 +328,8 @@ exports.updateUser = async (req, res) => {
 
 exports.requestEmailChange = async (req, res) => {
   try {
+     console.log("🔥 requestEmailChange route hit");
+
     const { newEmail } = req.body;
 
     const existingUser = await User.findOne({ email: newEmail });

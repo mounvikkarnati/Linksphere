@@ -9,7 +9,7 @@ const connectDB = require("./config/db");
 const Room = require("./models/Room");
 const Message = require("./models/Message");
 
-dotenv.config();
+require("dotenv").config();
 connectDB();
 
 const app = express();
