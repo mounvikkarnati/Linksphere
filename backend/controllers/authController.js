@@ -335,7 +335,8 @@ exports.requestEmailChange = async (req, res) => {
     const existingUser = await User.findOne({ email: newEmail });
     if (existingUser)
       return res.status(400).json({ message: "Email already exists" });
-
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS exists:", process.env.EMAIL_PASS ? "YES" : "NO");
     const otp = generateOtp();
 
     const user = await User.findById(req.user._id);
