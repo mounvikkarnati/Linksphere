@@ -9,7 +9,15 @@ const generateOtp = () => {
 // Send OTP Email
 const sendOtpEmail = async (email, otp, purpose = "Verification") => {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS, // Gmail App Password
