@@ -19,7 +19,7 @@ const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "https://LinkSphere-BChat.netlify.app"
+      "https://linksphere-bchat.vercel.app"
     ],
     methods: ["GET", "POST"]
   }
