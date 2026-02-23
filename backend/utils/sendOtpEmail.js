@@ -1,27 +1,22 @@
 const nodemailer = require("nodemailer");
 
 const sendOtpEmail = async (email, otp) => {
-  const transporter = nodemailer.createTransport({
+  try {
     const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: "Password Reset OTP - BChat",
-    html: `
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Password Reset OTP - BChat",
+ html: `
 
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1e293b; background-color: #f8fafc; margin: 0; padding: 20px;">
     <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1), 0 4px 12px 0 rgba(0, 0, 0, 0.06);">
@@ -96,7 +91,13 @@ const sendOtpEmail = async (email, otp) => {
     </div>
     </body>
     `,
-  });
+    });
+
+    console.log("✅ Email sent successfully");
+  } catch (error) {
+    console.error("❌ EMAIL ERROR:", error);
+    throw error;
+  }
 };
 
 module.exports = sendOtpEmail;

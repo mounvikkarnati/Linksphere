@@ -8,28 +8,29 @@ const generateOtp = () => {
 
 // Send OTP Email
 const sendOtpEmail = async (email, otp, purpose = "Verification") => {
-  const transporter = nodemailer.createTransport({
+  try {
     const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Gmail App Password
-    },
-  });
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: `${purpose} OTP`,
-    text: `Your OTP for ${purpose} is: ${otp}\n\nThis OTP is valid for 10 minutes.`,
-  });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: `${purpose} OTP`,
+      text: `Your OTP for ${purpose} is: ${otp}\n\nThis OTP is valid for 10 minutes.`,
+    });
+
+    console.log("✅ Email sent successfully");
+  } catch (error) {
+    console.error("❌ EMAIL ERROR:", error);
+    throw error;
+  }
 };
 
 module.exports = {
