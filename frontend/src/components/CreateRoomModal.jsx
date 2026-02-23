@@ -19,7 +19,7 @@ const handleSubmit = async (e) => {
     const token = localStorage.getItem('token');
 
     const response = await axios.post(
-      'http://linksphere-backend-k60s.onrender.com/api/rooms/create',
+      'https://linksphere-backend-k60s.onrender.com/api/rooms/create',
       roomData,
       {
         headers: {
