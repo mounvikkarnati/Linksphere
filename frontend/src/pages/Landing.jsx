@@ -59,6 +59,7 @@ const Landing = () => {
                   <Link to="/dashboard">
                     <button className="btn-primary">Dashboard</button>
                   </Link>
+                  
                   <button
                     className="btn-secondary"
                     onClick={() => {

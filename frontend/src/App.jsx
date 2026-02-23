@@ -8,6 +8,7 @@ import VerifyOtp from "./pages/VerifyOtp";
 import Room from "./pages/Room";
 import { Toaster } from "react-hot-toast";
 import ForgotPassword from "./pages/ForgotPassword";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -19,6 +20,8 @@ function App() {
         <Route path="/verify" element={<VerifyOtp />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+
+        <Route path="/settings" element={<Settings />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
           path="/dashboard"

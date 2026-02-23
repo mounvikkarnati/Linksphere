@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import axios from 'axios';
@@ -17,10 +17,12 @@ const Room = () => {
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const skipScrollRef = useRef(false);
   const [activeReactionMessage, setActiveReactionMessage] = useState(null);
+
   // ===============================
   // INITIAL LOAD
   // ===============================
@@ -55,33 +57,44 @@ const Room = () => {
     newSocket.on('error', (error) => {
       toast.error(error.message);
     });
-   newSocket.on("user_typing", ({ userId, username }) => {
-  if (userId === user?._id) return; // 👈 ADD THIS
 
-  setTypingUsers(prev => {
-    if (prev.find(u => u.userId === userId)) return prev;
-    return [...prev, { userId, username }];
-  });
-});
+    newSocket.on("user_typing", ({ userId, username }) => {
+      if (userId === user?._id) return;
 
-   newSocket.on("user_stop_typing", ({ userId }) => {
-  setTypingUsers(prev =>
-    prev.filter(u => u.userId !== userId)
-  );
-});
+      setTypingUsers(prev => {
+        if (prev.find(u => u.userId === userId)) return prev;
+        return [...prev, { userId, username }];
+      });
+    });
+
+    newSocket.on("user_stop_typing", ({ userId }) => {
+      setTypingUsers(prev =>
+        prev.filter(u => u.userId !== userId)
+      );
+    });
+
+    // Handle window resize to close sidebar on larger screens
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
 
     return () => {
       newSocket.disconnect();
+      window.removeEventListener('resize', handleResize);
     };
   }, [roomId]);
 
- useEffect(() => {
-  if (!skipScrollRef.current) {
-    scrollToBottom();
-  }
+  useEffect(() => {
+    if (!skipScrollRef.current) {
+      scrollToBottom();
+    }
+    skipScrollRef.current = false;
+  }, [messages]);
 
-  skipScrollRef.current = false; // reset after update
-}, [messages]);
   // ===============================
   // FETCH USER
   // ===============================
@@ -158,28 +171,28 @@ const Room = () => {
   };
 
   // ===============================
-// EXTEND ROOM EXPIRY (ADMIN ONLY)
-// ===============================
-const handleExtendExpiry = async (days) => {
-  try {
-    const token = localStorage.getItem("token");
+  // EXTEND ROOM EXPIRY (ADMIN ONLY)
+  // ===============================
+  const handleExtendExpiry = async (days) => {
+    try {
+      const token = localStorage.getItem("token");
 
-    await axios.put(
-      `http://localhost:5001/api/rooms/${roomId}/extend-expiry`,
-      { expiresIn: days },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+      await axios.put(
+        `http://localhost:5001/api/rooms/${roomId}/extend-expiry`,
+        { expiresIn: days },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
-      }
-    );
+      );
 
-    toast.success(`Room extended by ${days} days`);
-    fetchRoomDetails(); // refresh room data
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to extend room");
-  }
-};
+      toast.success(`Room extended by ${days} days`);
+      fetchRoomDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to extend room");
+    }
+  };
 
   // ===============================
   // REMOVE MEMBER
@@ -220,30 +233,29 @@ const handleExtendExpiry = async (days) => {
   // ===============================
   // REACT TO MESSAGE
   // ===============================
+  const handleReaction = async (messageId, emoji) => {
+    try {
+      const token = localStorage.getItem("token");
 
-const handleReaction = async (messageId, emoji) => {
-  try {
-    const token = localStorage.getItem("token");
+      skipScrollRef.current = true;
 
-    skipScrollRef.current = true; // prevent scroll
-
-    await axios.post(
-      `http://localhost:5001/api/rooms/message/${messageId}/react`,
-      { emoji },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
+      await axios.post(
+        `http://localhost:5001/api/rooms/message/${messageId}/react`,
+        { emoji },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
-      }
-    );
+      );
 
-    fetchMessages();
+      fetchMessages();
 
-  } catch (err) {
-    console.log(err.response?.data || err.message); // add this temporarily
-    toast.error("Reaction failed");
-  }
-};
+    } catch (err) {
+      console.log(err.response?.data || err.message);
+      toast.error("Reaction failed");
+    }
+  };
 
   // ===============================
   // FILE UPLOAD
@@ -297,239 +309,371 @@ const handleReaction = async (messageId, emoji) => {
   }
 
   return (
-    <div className="min-h-screen bg-black flex">
+    <div className="min-h-screen bg-black">
+      {/* ================= MOBILE HEADER ================= */}
+      <header className="md:hidden fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-lg border-b border-white/10 z-30 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-white text-2xl p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+          
+          <div className="flex-1 text-center mx-2">
+            <h2 className="text-lg font-bold truncate">{room?.name}</h2>
+            <p className="text-xs text-[#9CA3AF] truncate">{roomId}</p>
+          </div>
 
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold flex-shrink-0">
+            {members.length}
+          </div>
+        </div>
+      </header>
 
-      {/* ================= Sidebar ================= */}
-      <motion.div
-        initial={{ x: -300 }}
-        animate={{ x: 0 }}
-        className="fixed left-0 top-0 h-full w-72 glass-card m-4 p-6 flex flex-col"
+      {/* ================= MOBILE BACKDROP ================= */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ================= MOBILE SIDEBAR ================= */}
+      <motion.aside
+        initial={false}
+        animate={{ x: sidebarOpen ? 0 : '-100%' }}
+        transition={{ type: 'tween', duration: 0.3 }}
+        className="fixed left-0 top-0 h-full w-72 bg-black/95 backdrop-blur-xl border-r border-white/10 p-6 flex flex-col z-50 md:hidden overflow-y-auto"
       >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Room Info</h2>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="text-white text-xl p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
         <button
-          onClick={() => navigate('/dashboard')}
-          className="text-[#9CA3AF] hover:text-primary mb-4"
+          onClick={() => {
+            navigate('/dashboard');
+            setSidebarOpen(false);
+          }}
+          className="text-[#9CA3AF] hover:text-white transition-colors duration-200 mb-4 text-left"
         >
           ← Back to Dashboard
         </button>
 
         <div className="border-b border-white/10 pb-4 mb-4">
-          <h2 className="text-2xl font-bold">{room?.name}</h2>
-          <p className="text-sm text-[#9CA3AF] font-mono">{roomId}</p>
+          <h2 className="text-2xl font-bold break-words">{room?.name}</h2>
+          <p className="text-sm text-[#9CA3AF] font-mono break-all">{roomId}</p>
 
           {room?.isAdmin && (
-            <>
+            <div className="space-y-2 mt-4">
+              <button
+                onClick={() => {
+                  handleDeleteRoom();
+                  setSidebarOpen(false);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm w-full"
+              >
+                Delete Room
+              </button>
+
+              <button
+                onClick={() => {
+                  handleExtendExpiry(7);
+                  setSidebarOpen(false);
+                }}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm w-full"
+              >
+                Extend 7 Days
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <h3 className="text-sm text-[#9CA3AF] mb-3 sticky top-0 bg-black/95 py-2">
+            Members ({members.length})
+          </h3>
+
+          <div className="space-y-2">
+            {members.map(member => (
+              <div
+                key={member.user._id}
+                className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm block truncate">
+                    {member.user.username}
+                  </span>
+                  {member.role === 'admin' && (
+                    <span className="text-xs text-primary">
+                      Admin
+                    </span>
+                  )}
+                </div>
+
+                {room?.isAdmin && member.user._id !== user?._id && (
+                  <button
+                    onClick={() => {
+                      handleRemoveMember(member.user._id);
+                      setSidebarOpen(false);
+                    }}
+                    className="text-red-400 text-xs hover:text-red-300 ml-2 flex-shrink-0"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.aside>
+
+      {/* ================= DESKTOP SIDEBAR ================= */}
+      <motion.aside
+        initial={{ x: -300 }}
+        animate={{ x: 0 }}
+        className="hidden md:flex fixed left-0 top-0 h-full w-72 glass-card m-4 p-6 flex-col"
+      >
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="text-[#9CA3AF] hover:text-white transition-colors duration-200 mb-4 text-left"
+        >
+          ← Back to Dashboard
+        </button>
+
+        <div className="border-b border-white/10 pb-4 mb-4">
+          <h2 className="text-2xl font-bold break-words">{room?.name}</h2>
+          <p className="text-sm text-[#9CA3AF] font-mono break-all">{roomId}</p>
+
+          {room?.isAdmin && (
+            <div className="space-y-2 mt-4">
               <button
                 onClick={handleDeleteRoom}
-                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm w-full"
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm w-full"
               >
                 Delete Room
               </button>
 
               <button
                 onClick={() => handleExtendExpiry(7)}
-                className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm w-full"
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-lg text-sm w-full"
               >
                 Extend 7 Days
               </button>
-            </>
+            </div>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <h3 className="text-sm text-[#9CA3AF] mb-3">
+          <h3 className="text-sm text-[#9CA3AF] mb-3 sticky top-0 bg-black/95 py-2">
             Members ({members.length})
           </h3>
 
-          {members.map(member => (
-            <div
-              key={member.user._id}
-              className="flex items-center justify-between p-2 rounded-lg bg-white/5"
-            >
-              <div>
-                <span className="text-sm">
-                  {member.user.username}
-                </span>
-                {member.role === 'admin' && (
-                  <span className="text-xs text-primary ml-2">
-                    Admin
+          <div className="space-y-2">
+            {members.map(member => (
+              <div
+                key={member.user._id}
+                className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm block truncate">
+                    {member.user.username}
                   </span>
-                )}
-              </div>
+                  {member.role === 'admin' && (
+                    <span className="text-xs text-primary">
+                      Admin
+                    </span>
+                  )}
+                </div>
 
-              {room?.isAdmin &&
-                member.user._id !== user?._id && (
+                {room?.isAdmin && member.user._id !== user?._id && (
                   <button
-                    onClick={() =>
-                      handleRemoveMember(member.user._id)
-                    }
-                    className="text-red-400 text-xs"
+                    onClick={() => handleRemoveMember(member.user._id)}
+                    className="text-red-400 text-xs hover:text-red-300 ml-2 flex-shrink-0"
                   >
                     Remove
                   </button>
                 )}
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
-      </motion.div>
+      </motion.aside>
 
-      {/* ================= Chat Area ================= */}
-      <main className="flex-1 ml-72 p-4 flex flex-col h-screen">
-
-        <div className="flex-1 overflow-y-auto space-y-4 p-4">
+      {/* ================= MAIN CHAT AREA ================= */}
+      <main className="md:ml-80 flex flex-col h-screen pt-16 md:pt-4">
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 space-y-4">
           {messages.map((message, index) => {
-            const isOwnMessage =
-              message.sender?._id === user?._id;
+            const isOwnMessage = message.sender?._id === user?._id;
 
             return (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`relative flex items-center ${
+                className={`relative flex items-start ${
                   isOwnMessage ? 'justify-end' : 'justify-start'
                 }`}
               >
-                <div
-                  className={`max-w-[70%] rounded-2xl p-3 ${
-                    isOwnMessage
-                      ? 'bg-primary/20 border border-primary/30'
-                      : 'bg-white/5 border border-white/10'
-                  }`}
-                >
-                  {!isOwnMessage && (
-                    <p className="text-xs text-primary mb-1">
-                      {message.sender.username}
-                    </p>
-                  )}
-
-                  {message.content && (
-                    <p className="text-sm break-words">
-                      {message.content}
-                    </p>
-                  )}
-
-                  <a
-                    href={message.fileUrl}
-                    onClick={(e) => {
-                      e.preventDefault();
-
-                      fetch(message.fileUrl)
-                        .then(res => res.blob())
-                        .then(blob => {
-                          const url = window.URL.createObjectURL(blob);
-
-                          const a = document.createElement("a");
-                          a.href = url;
-
-                          // ✅ Preserve correct filename with extension
-                          a.download = message.fileName;
-
-                          document.body.appendChild(a);
-                          a.click();
-                          a.remove();
-
-                          window.URL.revokeObjectURL(url);
-                        });
-                    }}
-                    className="text-blue-400 underline mt-2 block cursor-pointer"
+                <div className="relative group max-w-[85%] md:max-w-[70%]">
+                  <div
+                    className={`rounded-2xl p-3 ${
+                      isOwnMessage
+                        ? 'bg-primary/20 border border-primary/30'
+                        : 'bg-white/5 border border-white/10'
+                    }`}
                   >
-                    📄 {message.fileName}
-                  </a>
+                    {!isOwnMessage && (
+                      <p className="text-xs text-primary mb-1 font-semibold">
+                        {message.sender?.username}
+                      </p>
+                    )}
 
-                  <p className="text-xs text-[#9CA3AF] text-right mt-1">
-                    {formatTime(message.createdAt)}
-                  </p>
+                    {message.content && (
+                      <p className="text-sm md:text-base break-words whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    )}
 
-                  {/* Reactions */}
-                  <div className="flex gap-2 mt-1">
-                    {Object.entries(
-                      message.reactions?.reduce((acc, reaction) => {
-                        acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
-                        return acc;
-                      }, {}) || {}
-                    ).map(([emoji, count]) => (
-                      <span
-                        key={message._id + emoji}
-                        className="text-sm bg-white/10 px-2 py-1 rounded-full"
+                    {message.fileUrl && (
+                      <a
+                        href={message.fileUrl}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          fetch(message.fileUrl)
+                            .then(res => res.blob())
+                            .then(blob => {
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = message.fileName;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(url);
+                            });
+                        }}
+                        className="text-blue-400 hover:text-blue-300 underline mt-2 block cursor-pointer text-sm break-all"
                       >
-                        {emoji} {count}
-                      </span>
-                    ))}
+                        📎 {message.fileName}
+                      </a>
+                    )}
+
+                    <p className="text-xs text-[#9CA3AF] text-right mt-1">
+                      {formatTime(message.createdAt)}
+                    </p>
+
+                    {/* Reactions Display */}
+                    {message.reactions && message.reactions.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {Object.entries(
+                          message.reactions.reduce((acc, reaction) => {
+                            acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).map(([emoji, count]) => (
+                          <span
+                            key={message._id + emoji}
+                            className="text-xs bg-white/10 px-2 py-1 rounded-full"
+                          >
+                            {emoji} {count}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Reaction Button */}
+                  <button
+                    onClick={() =>
+                      setActiveReactionMessage(
+                        activeReactionMessage === message._id ? null : message._id
+                      )
+                    }
+                    className={`absolute top-1 ${
+                      isOwnMessage ? 'left-0 -translate-x-8' : 'right-0 translate-x-8'
+                    } text-gray-400 hover:text-white transition opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100`}
+                  >
+                    😊
+                  </button>
 
                   {/* Emoji Picker */}
-                 {activeReactionMessage === message._id && (
-                    <div
-                      className={`
-                        absolute
-                        -top-12
-                        ${isOwnMessage ? "right-10" : "left-10"}
-                        bg-black/90
-                        backdrop-blur-md
-                        border border-white/10
-                        rounded-full
-                        px-3 py-2
-                        flex gap-3
-                        shadow-lg
-                        animate-fadeIn
-                      `}
-                    >
-                      {["🔥", "❤️", "😂", "👍", "😮","🥲","🎉","👍","👎"].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => {
-                            handleReaction(message._id, emoji);
-                            setActiveReactionMessage(null);
-                          }}
-                          className="hover:scale-125 transition-transform duration-150"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {activeReactionMessage === message._id && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                        className={`
+                          absolute z-50
+                          ${isOwnMessage ? 'right-0' : 'left-0'}
+                          -top-14
+                          bg-black/95
+                          backdrop-blur-md
+                          border border-white/10
+                          rounded-full
+                          px-3 py-2
+                          flex gap-2 md:gap-3
+                          shadow-xl
+                          flex-wrap
+                          max-w-[200px] md:max-w-none
+                        `}
+                      >
+                        {["🔥", "❤️", "😂", "👍", "😮", "🥲", "🎉", "👎"].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => {
+                              handleReaction(message._id, emoji);
+                              setActiveReactionMessage(null);
+                            }}
+                            className="hover:scale-125 transition-transform duration-150 text-lg md:text-xl"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                {/* Smiley Button */}
-                  <div className="relative inline-block group">
-                    {/* Tooltip */}
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 
-                                    bg-black text-white text-xs px-2 py-1 rounded 
-                                    opacity-0 group-hover:opacity-100 
-                                    transition duration-200 whitespace-nowrap">
-                      Reactions
-                    </span>
-
-                    {/* Button */}
-                    <button
-                      onClick={() =>
-                        setActiveReactionMessage(
-                          activeReactionMessage === message._id ? null : message._id
-                        )
-                      }
-                      className="ml-2 text-gray-400 hover:text-white transition"
-                    >
-                      😊
-                    </button>
-                  </div>
               </motion.div>
-              
             );
           })}
 
+          {/* Typing Indicator */}
+          <AnimatePresence>
+            {typingUsers.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="px-2"
+              >
+                <p className="text-sm text-gray-400 italic">
+                  {typingUsers.map(u => u.username).join(", ")} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div ref={messagesEndRef} />
         </div>
-{typingUsers.length > 0 && (
-  <div className="px-4 pb-2">
-    <p className="text-sm text-gray-400 italic">
-      {typingUsers.map(u => u.username).join(", ")} is typing...
-    </p>
-  </div>
-)}
-        {/* ================= Message Input ================= */}
-        <form onSubmit={handleSendMessage} className="mt-4">
-          <div className="flex space-x-2 items-center">
 
+        {/* ================= Message Input ================= */}
+        <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-white/10 bg-black/80 backdrop-blur-lg">
+          <div className="flex items-center gap-2 max-w-4xl mx-auto">
             <input
               type="file"
               onChange={handleFileUpload}
@@ -539,7 +683,7 @@ const handleReaction = async (messageId, emoji) => {
 
             <label
               htmlFor="fileInput"
-              className="cursor-pointer bg-white/10 px-3 py-2 rounded-lg hover:bg-white/20 transition"
+              className="cursor-pointer bg-white/10 hover:bg-white/20 p-3 rounded-lg transition flex-shrink-0"
             >
               📎
             </label>
@@ -548,35 +692,33 @@ const handleReaction = async (messageId, emoji) => {
               type="text"
               value={newMessage}
               onChange={(e) => {
-  setNewMessage(e.target.value);
+                setNewMessage(e.target.value);
 
-  if (!socket) return;
+                if (!socket) return;
 
-  socket.emit("typing", { roomId });
+                socket.emit("typing", { roomId });
 
-  if (typingTimeoutRef.current) {
-    clearTimeout(typingTimeoutRef.current);
-  }
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
 
-  typingTimeoutRef.current = setTimeout(() => {
-    socket.emit("stop_typing", { roomId });
-  }, 1000);
-}}
+                typingTimeoutRef.current = setTimeout(() => {
+                  socket.emit("stop_typing", { roomId });
+                }, 1000);
+              }}
               placeholder="Type your message..."
-              className="flex-1 input-field"
+              className="flex-1 input-field text-sm md:text-base"
             />
 
             <button
               type="submit"
               disabled={!newMessage.trim()}
-              className="btn-primary px-6 disabled:opacity-50"
+              className="btn-primary px-4 md:px-6 py-3 disabled:opacity-50 text-sm md:text-base flex-shrink-0"
             >
               Send
             </button>
-
           </div>
         </form>
-
       </main>
     </div>
   );
