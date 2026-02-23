@@ -40,7 +40,7 @@ const Room = () => {
     fetchRoomDetails();
     fetchMessages();
 
-    const newSocket = io('https://linksphere-backend-k60s.onrender.com', {
+    const newSocket = io('http://localhost:5001/', {
       auth: { token }
     });
 
@@ -100,7 +100,7 @@ const Room = () => {
   // ===============================
   const fetchUser = async () => {
     try {
-      const res = await axios.get('https://linksphere-backend-k60s.onrender.com/api/auth/me');
+      const res = await axios.get('http://localhost:5001/api/auth/me');
       setUser(res.data);
     } catch (err) {
       console.error('User fetch failed');
@@ -113,7 +113,7 @@ const Room = () => {
   const fetchRoomDetails = async () => {
     try {
       const res = await axios.get(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/details`
+        `http://localhost:5001/api/rooms/${roomId}/details`
       );
 
       setRoom({
@@ -137,7 +137,7 @@ const Room = () => {
   const fetchMessages = async () => {
     try {
       const res = await axios.get(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/messages`
+        `http://localhost:5001/api/rooms/${roomId}/messages`
       );
       setMessages(res.data.messages);
     } catch (err) {
@@ -159,7 +159,7 @@ const Room = () => {
 
     try {
       await axios.delete(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}`
+        `http://localhost:5001/api/rooms/${roomId}`
       );
 
       toast.success('Room deleted');
@@ -178,7 +178,7 @@ const Room = () => {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/extend-expiry`,
+        `http://localhost:5001/api/rooms/${roomId}/extend-expiry`,
         { expiresIn: days },
         {
           headers: {
@@ -203,7 +203,7 @@ const Room = () => {
 
     try {
       await axios.delete(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/remove/${userId}`
+        `http://localhost:5001/api/rooms/${roomId}/remove/${userId}`
       );
 
       toast.success('Member removed');
@@ -240,7 +240,7 @@ const Room = () => {
       skipScrollRef.current = true;
 
       await axios.post(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/message/${messageId}/react`,
+        `http://localhost:5001/api/rooms/message/${messageId}/react`,
         { emoji },
         {
           headers: {
@@ -271,7 +271,7 @@ const Room = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/upload`,
+        `http://localhost:5001/api/rooms/${roomId}/upload`,
         formData,
         {
           headers: {

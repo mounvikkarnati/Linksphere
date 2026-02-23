@@ -23,7 +23,7 @@ export default function Login() {
 
     try {
       const res = await axios.post(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/login",
+        "http://localhost:5001/api/auth/login",
         formData
       );
 

@@ -26,7 +26,7 @@ const Settings = () => {
   const fetchUser = async () => {
     try {
       const res = await axios.get(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/me",
+        "http://localhost:5001/api/auth/me",
         {
           headers: { Authorization: `Bearer ${getToken()}` },
         }
@@ -44,7 +44,7 @@ const Settings = () => {
   const handleUsernameUpdate = async () => {
     try {
       await axios.put(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/update",
+        "http://localhost:5001/api/auth/update",
         { username },
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -61,7 +61,7 @@ const Settings = () => {
   const requestEmailOtp = async () => {
     try {
       await axios.put(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/request-email-change",
+        "http://localhost:5001/api/auth/request-email-change",
         { newEmail: email },
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -70,15 +70,16 @@ const Settings = () => {
 
       toast.success("OTP sent to new email");
       setEmailOtpSent(true);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to send OTP");
-    }
+    }  catch (error) {
+  console.error("Email Change Error:", error);
+  res.status(500).json({ message: "Failed to send OTP" });
+}
   };
 
   const verifyEmailOtp = async () => {
     try {
       await axios.put(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/verify-email-change",
+        "http://localhost:5001/api/auth/verify-email-change",
         { otp: emailOtp },
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -97,7 +98,7 @@ const Settings = () => {
   const requestDeleteOtp = async () => {
     try {
       await axios.post(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/request-delete-account-otp",
+        "http://localhost:5001/api/auth/request-delete-account-otp",
         {},
         {
           headers: { Authorization: `Bearer ${getToken()}` },
@@ -114,7 +115,7 @@ const Settings = () => {
   const verifyDeleteOtp = async () => {
     try {
       await axios.post(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/verify-delete-account-otp",
+        "http://localhost:5001/api/auth/verify-delete-account-otp",
         { otp: deleteOtp },
         {
           headers: { Authorization: `Bearer ${getToken()}` },

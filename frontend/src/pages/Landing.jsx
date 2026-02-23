@@ -9,7 +9,7 @@ const Landing = () => {
       setIsLoggedIn(!!localStorage.getItem('token'));
       const fetchCount = async () => {
         try {
-          const res = await fetch("https://linksphere-backend-k60s.onrender.com/api/auth/count");
+          const res = await fetch("http://localhost:5001/api/auth/count");
           const data = await res.json();
           setUserCount(data.totalUsers);
         } catch (error) {
