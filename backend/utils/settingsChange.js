@@ -19,14 +19,19 @@ const sendOtpEmail = async (email, otp, purpose = "Verification") => {
       },
     });
 
-    await transporter.sendMail({
+    // 🔥 ADD IT HERE
+    await transporter.verify();
+    console.log("✅ SMTP verified");
+
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: `${purpose} OTP`,
-      text: `Your OTP for ${purpose} is: ${otp}\n\nThis OTP is valid for 10 minutes.`,
+      text: `Your OTP for ${purpose} is: ${otp}`,
     });
 
-    console.log("✅ Email sent successfully");
+    console.log("✅ Email sent:", info.response);
+
   } catch (error) {
     console.error("❌ EMAIL ERROR:", error);
     throw error;
