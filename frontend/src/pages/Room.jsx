@@ -40,7 +40,7 @@ const Room = () => {
     fetchRoomDetails();
     fetchMessages();
 
-    const newSocket = io('https://linksphere-backend-k60s.onrender.com/', {
+    const newSocket = io(`${import.meta.env.VITE_API_URL}/`, {
       auth: { token }
     });
 
@@ -100,7 +100,7 @@ const Room = () => {
   // ===============================
   const fetchUser = async () => {
     try {
-      const res = await axios.get('https://linksphere-backend-k60s.onrender.com/api/auth/me');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`);
       setUser(res.data);
     } catch (err) {
       console.error('User fetch failed');
@@ -113,7 +113,7 @@ const Room = () => {
   const fetchRoomDetails = async () => {
     try {
       const res = await axios.get(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/details`
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/details`
       );
 
       setRoom({
@@ -137,7 +137,7 @@ const Room = () => {
   const fetchMessages = async () => {
     try {
       const res = await axios.get(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/messages`
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/messages`
       );
       setMessages(res.data.messages);
     } catch (err) {
@@ -159,7 +159,7 @@ const Room = () => {
 
     try {
       await axios.delete(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}`
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}`
       );
 
       toast.success('Room deleted');
@@ -178,7 +178,7 @@ const Room = () => {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/extend-expiry`,
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/extend-expiry`,
         { expiresIn: days },
         {
           headers: {
@@ -203,7 +203,7 @@ const Room = () => {
 
     try {
       await axios.delete(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/remove/${userId}`
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/remove/${userId}`
       );
 
       toast.success('Member removed');
@@ -240,7 +240,7 @@ const Room = () => {
       skipScrollRef.current = true;
 
       await axios.post(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/message/${messageId}/react`,
+        `${import.meta.env.VITE_API_URL}/api/rooms/message/${messageId}/react`,
         { emoji },
         {
           headers: {
@@ -271,7 +271,7 @@ const Room = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        `https://linksphere-backend-k60s.onrender.com/api/rooms/${roomId}/upload`,
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/upload`,
         formData,
         {
           headers: {

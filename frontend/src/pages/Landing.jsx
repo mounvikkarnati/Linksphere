@@ -9,7 +9,7 @@ const Landing = () => {
       setIsLoggedIn(!!localStorage.getItem('token'));
       const fetchCount = async () => {
         try {
-          const res = await fetch("https://linksphere-backend-k60s.onrender.com/api/auth/count");
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/count`);
           const data = await res.json();
           setUserCount(data.totalUsers);
         } catch (error) {
@@ -144,8 +144,8 @@ const Landing = () => {
     </p>
     <p className="mt-2">
       Designed and developed by{" "}
-      <span className="glow-text">Mounvik K</span> &{" "}
-      <span className="glow-text">Rohith N</span>
+      <a href="https://mounvikkarnati.ct.ws" className="glow-text">Mounvik K</a> &{" "}
+      <a href="https://rohithnarayanan.vercel.app/" className="glow-text">Rohith N</a>
     </p>
   </div>
 </footer>

@@ -18,7 +18,7 @@ const JoinRoomModal = ({ onClose, onRoomJoined }) => {
     const token = localStorage.getItem('token');
 
     await axios.post(
-      'https://linksphere-backend-k60s.onrender.com/api/rooms/join',
+      `${import.meta.env.VITE_API_URL}/api/rooms/join`,
       roomData,
       {
         headers: {

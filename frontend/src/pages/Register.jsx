@@ -22,7 +22,7 @@ export default function Register() {
 
     try {
   await axios.post(
-    "https://linksphere-backend-k60s.onrender.com/api/auth/register",
+    `${import.meta.env.VITE_API_URL}/api/auth/register`,
     formData
   );
 

@@ -31,7 +31,7 @@ export default function VerifyOtp() {
 
     try {
       await axios.post(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/verify-otp",
+        `${import.meta.env.VITE_API_URL}/api/auth/verify-otp`,
         {
           email: formData.email,
           otp: formData.otp,

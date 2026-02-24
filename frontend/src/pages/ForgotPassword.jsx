@@ -26,7 +26,7 @@ export default function ForgotPassword() {
       setSuccess("");
 
       await axios.post(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/forgot-password",
+        `${import.meta.env.VITE_API_URL}/api/auth/forgot-password`,
         { email }
       );
 
@@ -55,7 +55,7 @@ export default function ForgotPassword() {
       setSuccess("");
 
       const res = await axios.post(
-        "https://linksphere-backend-k60s.onrender.com/api/auth/verify-reset-otp",
+        `${import.meta.env.VITE_API_URL}/api/auth/verify-reset-otp`,
         { email, otp }
       );
 
