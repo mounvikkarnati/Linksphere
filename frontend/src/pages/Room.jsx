@@ -314,7 +314,13 @@ const Room = () => {
       minute: '2-digit'
     });
   };
-
+  const formatDateSeparator = (date) => {
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -532,17 +538,38 @@ const Room = () => {
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 space-y-4">
           {messages.map((message, index) => {
-            const isOwnMessage = message.sender?._id === user?._id;
 
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`relative flex items-start ${
-                  isOwnMessage ? 'justify-end' : 'justify-start'
-                }`}
-              >
+  const currentDate = new Date(message.createdAt);
+  const previousMessage = messages[index - 1];
+  const previousDate = previousMessage
+    ? new Date(previousMessage.createdAt)
+    : null;
+
+  const showDateSeparator =
+    !previousDate ||
+    currentDate.toDateString() !== previousDate.toDateString();
+
+  const isOwnMessage = message.sender?._id === user?._id;
+
+  return (
+    <div key={index}>
+
+      {/* ✅ DATE SEPARATOR */}
+      {showDateSeparator && (
+        <div className="flex justify-center my-4">
+          <span className="bg-white/10 text-blue-400 text-s px-4 py-1 rounded-full">
+            {formatDateSeparator(message.createdAt)}
+          </span>
+        </div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`relative flex items-start ${
+          isOwnMessage ? 'justify-end' : 'justify-start'
+        }`}
+      >
                 <div className="relative group max-w-[85%] md:max-w-[70%]">
                   <div
                     className={`rounded-2xl p-3 ${
@@ -663,7 +690,9 @@ const Room = () => {
                     )}
                   </AnimatePresence>
                 </div>
+               
               </motion.div>
+               </div>
             );
           })}
 
