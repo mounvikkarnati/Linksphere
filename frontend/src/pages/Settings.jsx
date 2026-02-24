@@ -57,24 +57,28 @@ const Settings = () => {
     }
   };
 
-  // ================= EMAIL CHANGE =================
-  const requestEmailOtp = async () => {
-    try {
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/auth/request-email-change`,
-        { newEmail: email },
-        {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        }
-      );
+// ================= EMAIL CHANGE =================
+const requestEmailOtp = async () => {
+  try {
+    const response = await axios.put(
+      `${import.meta.env.VITE_API_URL}/api/auth/request-email-change`,
+      { newEmail: email },
+      {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      }
+    );
 
-      toast.success("OTP sent to new email");
-      setEmailOtpSent(true);
-    }  catch (error) {
-  console.error("Email Change Error:", error);
-  res.status(500).json({ message: "Failed to send OTP" });
-}
-  };
+    toast.success(response.data.message || "OTP sent to new email");
+    setEmailOtpSent(true);
+
+  } catch (error) {
+    console.error("Email Change Error:", error);
+
+    toast.error(
+      error.response?.data?.message || "Failed to send OTP"
+    );
+  }
+};
 
   const verifyEmailOtp = async () => {
     try {

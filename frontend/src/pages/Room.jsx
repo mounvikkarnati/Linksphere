@@ -22,6 +22,7 @@ const Room = () => {
   const typingTimeoutRef = useRef(null);
   const skipScrollRef = useRef(false);
   const [activeReactionMessage, setActiveReactionMessage] = useState(null);
+  const [aiMode, setAiMode] = useState(false);
 
   // ===============================
   // INITIAL LOAD
@@ -217,19 +218,33 @@ const Room = () => {
   // ===============================
   // SEND MESSAGE
   // ===============================
-  const handleSendMessage = (e) => {
-    e.preventDefault();
+ const handleSendMessage = (e) => {
 
-    if (!newMessage.trim() || !socket) return;
+  e.preventDefault();
 
-    socket.emit('send_message', {
+  if (!newMessage.trim() || !socket) return;
+
+  if (aiMode) {
+
+    // send to AI
+    socket.emit("ask_ai", {
       roomId,
-      content: newMessage.trim()
+      question: newMessage
     });
 
-    setNewMessage('');
-  };
+  } else {
 
+    // normal message
+    socket.emit("send_message", {
+      roomId,
+      content: newMessage
+    });
+
+  }
+
+  setNewMessage("");
+
+};
   // ===============================
   // REACT TO MESSAGE
   // ===============================
@@ -532,7 +547,7 @@ const Room = () => {
                   <div
                     className={`rounded-2xl p-3 ${
                       isOwnMessage
-                        ? 'bg-primary/20 border border-primary/30'
+                        ? 'bg-tertiary/20 border border-tertiary/30'
                         : 'bg-white/5 border border-white/10'
                     }`}
                   >
@@ -674,6 +689,18 @@ const Room = () => {
         {/* ================= Message Input ================= */}
         <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-white/10 bg-black/80 backdrop-blur-lg">
           <div className="flex items-center gap-2 max-w-4xl mx-auto">
+            {/* 🤖 AI BUTTON */}
+  <button
+    type="button"
+    onClick={() => setAiMode(!aiMode)}
+    className={`px-4 py-3 rounded-lg font-semibold transition ${
+      aiMode
+        ? "bg-purple-600 text-white"
+        : "bg-white/10 text-gray-300 hover:bg-white/20"
+    }`}
+  >
+    🤖
+  </button>
             <input
               type="file"
               onChange={handleFileUpload}
@@ -706,7 +733,7 @@ const Room = () => {
                   socket.emit("stop_typing", { roomId });
                 }, 1000);
               }}
-              placeholder="Type your message..."
+              placeholder={aiMode ? "Ask AI anything..." : "Type your message..."}
               className="flex-1 input-field text-sm md:text-base"
             />
 

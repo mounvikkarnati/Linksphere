@@ -1,53 +1,63 @@
 const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema(
-  {
-    room: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Room",
-      required: true,
-    },
-
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    content: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
-    },
-
-    // ✅ FILE FIELDS (Cloudinary Ready)
-    fileUrl: String,
-    publicId: String,   // 👈 Added for Cloudinary delete support
-    fileType: String,
-    fileName: String,
-    fileSize: Number,
-
-    // ✅ REACTIONS FIELD
-    reactions: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-        },
-        emoji: {
-          type: String,
-        },
-      },
-    ],
+{
+  room: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Room",
+    required: true,
   },
-  { timestamps: true }
+
+  // ✅ FIX: sender NOT required (AI messages use null)
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+
+  // ✅ NEW: identify AI messages
+  isAI: {
+    type: Boolean,
+    default: false,
+  },
+
+  content: {
+    type: String,
+    trim: true,
+    maxlength: 2000,
+  },
+
+  // FILE SUPPORT (unchanged)
+  fileUrl: String,
+  publicId: String,
+  fileType: String,
+  fileName: String,
+  fileSize: Number,
+
+  reactions: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      emoji: String,
+    },
+  ],
+
+},
+{ timestamps: true }
 );
 
-// Ensure message has text OR file
+/////////////////////////////////////////////////////
+// ✅ FIX: correct validator (NO next parameter)
+/////////////////////////////////////////////////////
+
 messageSchema.pre("validate", function () {
+
   if (!this.content && !this.fileUrl) {
     throw new Error("Message must contain text or file");
   }
+
 });
 
 module.exports = mongoose.model("Message", messageSchema);

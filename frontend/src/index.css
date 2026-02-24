@@ -75,6 +75,10 @@ body {
   background-color: var(--secondary);
 }
 
+.bg-tertiary\/20 {
+  background-color: rgb(52, 52, 0);
+}
+
 /* Transparent glow backgrounds */
 .bg-primary\/20 {
   background-color: rgba(0, 245, 212, 0.2);
