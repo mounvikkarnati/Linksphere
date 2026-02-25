@@ -11,7 +11,7 @@ LinkSphere is a modern real‑time chat application with AI integration, file sh
 - Create and join chat rooms
 - Real‑time messaging using Socket.IO
 - Send and receive messages instantly
-- AI chatbot integration inside chat rooms
+- AI chat helper integration inside chat rooms
 - File upload and sharing
 - Emoji reactions on messages
 - Typing indicators
@@ -370,15 +370,15 @@ Admin can:
 
 ## Backend
 - Render
-- Railway
-- VPS
-
+- 
 ## Frontend
 - Vercel
-- Netlify
 
 ## Database
 - MongoDB Atlas
+
+## Files Storage
+- Cloudinary
 
 ---
 
@@ -397,14 +397,11 @@ Admin can:
 # 👨‍💻 Author
 
 Rohith Narayanan
+Mounvik Karnati
 
 ---
 
-# 📜 License
 
-MIT License
-
----
 
 # ⭐ Conclusion
 
