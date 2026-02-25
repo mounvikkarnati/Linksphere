@@ -41,6 +41,8 @@ const io = new Server(server, {
     credentials: true
   }
 });
+// Make io available in routes
+app.set("io", io);
 
 ////////////////////////////////////////////////////////////
 // MIDDLEWARE
@@ -55,6 +57,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
+// Attach io to every request
+app.use((req, res, next) => {
+  req.io = app.get("io");
+  next();
+});
 
 ////////////////////////////////////////////////////////////
 // ROUTES

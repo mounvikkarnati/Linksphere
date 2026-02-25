@@ -55,6 +55,14 @@ const Room = () => {
       setMessages(prev => [...prev, message]);
     });
 
+    newSocket.on("message_updated", (updatedMessage) => {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        )
+      );
+    });
+
     newSocket.on('error', (error) => {
       toast.error(error.message);
     });
@@ -264,7 +272,7 @@ const Room = () => {
         }
       );
 
-      fetchMessages();
+      // fetchMessages();
 
     } catch (err) {
       console.log(err.response?.data || err.message);
@@ -328,7 +336,41 @@ const Room = () => {
       </div>
     );
   }
+  ////////////////////////////////////////////////////////////
+// CONVERT TEXT LINKS TO CLICKABLE LINKS
+////////////////////////////////////////////////////////////
 
+const formatMessageWithLinks = (text) => {
+
+  if (!text) return text;
+
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+
+    if (part.match(urlRegex)) {
+
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 underline hover:text-blue-300 break-all"
+        >
+          {part}
+        </a>
+      );
+
+    }
+
+    return part;
+
+  });
+
+};
   return (
     <div className="min-h-screen bg-black">
       {/* ================= MOBILE HEADER ================= */}
@@ -586,7 +628,7 @@ const Room = () => {
 
                     {message.content && (
                       <p className="text-sm md:text-base break-words whitespace-pre-wrap">
-                        {message.content}
+                        {formatMessageWithLinks(message.content)}
                       </p>
                     )}
 
