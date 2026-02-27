@@ -5,10 +5,11 @@ import { io } from 'socket.io-client';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+
 const Room = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
-
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [room, setRoom] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -283,34 +284,47 @@ const Room = () => {
   // ===============================
   // FILE UPLOAD
   // ===============================
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
 
-    try {
-      const token = localStorage.getItem("token");
+const handleFileUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/upload`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+  const formData = new FormData();
+  formData.append("file", file);
 
-      setMessages(prev => [...prev, res.data.message]);
+  try {
+    const token = localStorage.getItem("token");
 
-    } catch (err) {
-      toast.error("Upload failed");
-    }
-    e.target.value = null;
-  };
+    const res = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/upload`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+
+        // 🔥 THIS IS THE IMPORTANT PART
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+        },
+      }
+    );
+
+    setMessages(prev => [...prev, res.data.message]);
+    setUploadProgress(0); // reset after complete
+
+  } catch (err) {
+    toast.error("Upload failed");
+    setUploadProgress(0);
+  }
+
+  e.target.value = null;
+};
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -633,28 +647,46 @@ const formatMessageWithLinks = (text) => {
                     )}
 
                     {message.fileUrl && (
-                      <a
-                        href={message.fileUrl}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          fetch(message.fileUrl)
-                            .then(res => res.blob())
-                            .then(blob => {
-                              const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement("a");
-                              a.href = url;
-                              a.download = message.fileName;
-                              document.body.appendChild(a);
-                              a.click();
-                              a.remove();
-                              window.URL.revokeObjectURL(url);
-                            });
-                        }}
-                        className="text-blue-400 hover:text-blue-300 underline mt-2 block cursor-pointer text-sm break-all"
-                      >
-                        📎 {message.fileName}
-                      </a>
-                    )}
+  <>
+    {/\.(jpeg|jpg|png|gif|webp)$/i.test(message.fileUrl) ? (
+      // 🖼️ IMAGE PREVIEW
+      <div className="mt-2">
+        <img
+          src={message.fileUrl}
+          alt={message.fileName}
+          className="rounded-lg max-w-xs md:max-w-sm cursor-pointer hover:opacity-90 transition"
+          onClick={() => window.open(message.fileUrl, "_blank")}
+        />
+      </div>
+    ) : (
+      // 📄 FILE CARD (Non-image files)
+      <div className="mt-2 bg-white/10 p-3 rounded-lg flex items-center gap-2">
+        <span className="text-lg">📄</span>
+        <a
+          href={message.fileUrl}
+          onClick={(e) => {
+            e.preventDefault();
+            fetch(message.fileUrl)
+              .then(res => res.blob())
+              .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = message.fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+              });
+          }}
+          className="text-blue-400 hover:underline break-all text-sm"
+        >
+          {message.fileName}
+        </a>
+      </div>
+    )}
+  </>
+)}
 
                     <p className="text-xs text-[#9CA3AF] text-right mt-1">
                       {formatTime(message.createdAt)}
@@ -758,7 +790,9 @@ const formatMessageWithLinks = (text) => {
         </div>
 
         {/* ================= Message Input ================= */}
+
         <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-white/10 bg-black/80 backdrop-blur-lg">
+        
           <div className="flex items-center gap-2 max-w-4xl mx-auto">
             {/* 🤖 AI BUTTON */}
   <button
@@ -772,6 +806,7 @@ const formatMessageWithLinks = (text) => {
   >
     🤖
   </button>
+  
             <input
               type="file"
               onChange={handleFileUpload}
@@ -814,6 +849,19 @@ const formatMessageWithLinks = (text) => {
               className="btn-primary px-4 md:px-6 py-3 disabled:opacity-50 text-sm md:text-base flex-shrink-0"
             >
               Send
+              {uploadProgress > 0 && (
+  <div className="mb-2">
+    <p className="text-xs text-gray-400">
+      Uploading... {uploadProgress}%
+    </p>
+    <div className="w-full bg-white/10 h-2 rounded-full">
+      <div
+        className="bg-primary h-2 rounded-full transition-all duration-200"
+        style={{ width: `${uploadProgress}%` }}
+      />
+    </div>
+  </div>
+)}
             </button>
           </div>
         </form>
