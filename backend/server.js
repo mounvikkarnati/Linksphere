@@ -60,6 +60,8 @@ app.use(cors({
 app.use(express.json());
 // ⚡ LATENCY: gzip-compress all API responses (big win for message lists)
 app.use(compression());
+// Render sits behind a proxy; trust it so socket.io/compression behave.
+app.set("trust proxy", 1);
 // Attach io to every request
 app.use((req, res, next) => {
   req.io = app.get("io");
@@ -76,6 +78,14 @@ app.use("/uploads", express.static("uploads"));
 
 app.get("/", (req, res) => {
   res.send("LinkSphere API running");
+});
+
+// ⚡ Lightweight health check (no DB) for uptime monitors / keep-alive pings.
+// Point a free monitor (UptimeRobot, cron-job.org) at this every ~5 minutes —
+// that prevents Render's free tier from spinning the instance down when idle,
+// which is the #1 cause of 800ms–1s first-request latency after deployment.
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
 });
 
 ////////////////////////////////////////////////////////////

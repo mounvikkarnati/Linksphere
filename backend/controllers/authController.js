@@ -172,12 +172,23 @@ exports.loginUser = async (req, res) => {
 };
 
 /* =================================
-   GET VERIFIED USER COUNT
+   GET VERIFIED USER COUNT (CACHED)
 ================================= */
+// ⚡ PRODUCTION LATENCY: the landing page calls this on every visit. The count
+// barely changes, so cache it in-memory for 60s — this avoids a MongoDB
+// round-trip (and a cold-start DB hit) on every single page load.
+let cachedUserCount = null;
+let cachedUserCountAt = 0;
+const USER_COUNT_TTL = 60 * 1000; // 60 seconds
+
 exports.getUserCount = async (req, res) => {
   try {
-    const count = await User.countDocuments({ isVerified: true });
-    res.json({ totalUsers: count });
+    const now = Date.now();
+    if (cachedUserCount === null || now - cachedUserCountAt > USER_COUNT_TTL) {
+      cachedUserCount = await User.countDocuments({ isVerified: true });
+      cachedUserCountAt = now;
+    }
+    res.json({ totalUsers: cachedUserCount });
   } catch (error) {
     console.log("User Count Error:", error);
     res.status(500).json({ message: "Server error" });

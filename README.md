@@ -394,6 +394,30 @@ Admin can:
 
 ---
 
+## ⚡ Production Latency Guide (Vercel + Render)
+
+After deploying the frontend to Vercel and the backend to Render, 1‑second first‑request latency is almost always caused by **Render's free tier sleeping the instance when idle** (plus cross‑region round‑trips). Fixes, in priority order:
+
+1. **Keep the backend awake (biggest win).** Render free instances spin down after ~15 min without traffic; the next request pays a cold‑start tax (~1s+). Point a **free uptime monitor** at the new health endpoint every 5 minutes:
+   - UptimeRobot → *New Monitor → HTTP(S)* → URL: `https://<your-backend>.onrender.com/api/health` → interval: 5 min.
+   - Cron‑job.org / Better Stack works the same.
+   - Or upgrade to Render's **Starter** plan and enable **Always‑On** (a few $/mo).
+
+2. **Pick regions close to each other.** Vercel's default region is `us-east` (Washington DC) and Render free is `us-west` (Oregon) — every request pays ~80ms RTT. On Render's paid plans you can select a region (pick one nearest to your Mongo Atlas cluster). On Mongo Atlas, choose an **M0 region close to your Render instance** (e.g. AWS Oregon).
+
+3. **What the code already does to help:**
+   - `/api/health` — lightweight no‑DB endpoint for keep‑alive pings.
+   - gzip compression on every API response.
+   - User‑count endpoint cached 60s in‑memory (landing page no longer hits Mongo every visit).
+   - Chat history limited to the 100 most‑recent messages, backed by a `{ room, createdAt }` compound index.
+   - Mongo pool tuned (`maxPoolSize: 10`, fail‑fast `serverSelectionTimeoutMS: 5000`).
+   - All email (Brevo) sends are fire‑and‑forget — they never block the API response.
+   - WebSocket‑only socket transport (no polling fallback).
+
+4. **Still expect a warm‑up hit after a real cold start** (deploy, or ~15+ min idle on free tier). That single request is unavoidable on free hosting; everything after a keep‑alive ping should feel instant.
+
+---
+
 # 👨‍💻 Author
 
 Rohith Narayanan

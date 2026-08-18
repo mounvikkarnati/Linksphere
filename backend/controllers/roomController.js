@@ -135,16 +135,17 @@ exports.getMyRooms = async (req, res) => {
     });
 
     const formatted = rooms.map(room => {
-      const member = room.members.find(
-        m => m.user.toString() === req.user._id.toString()
+      // Defensive: skip any entry whose user ref is null/dangling.
+      const member = (room.members || []).find(
+        m => m.user && m.user.toString() === req.user._id.toString()
       );
 
       return {
         id: room._id,
         name: room.name,
         roomId: room.roomId,
-        role: member.role,
-        members: room.members.length,
+        role: member?.role,
+        members: (room.members || []).filter(m => m.user).length,
         expiresAt: room.expiresAt
       };
     });
