@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import CreateRoomModal from '../components/CreateRoomModal';
 import JoinRoomModal from '../components/JoinRoomModal';
+import { AuthContext } from '../context/AuthContext';
 
 const Dashboard = () => {
-  const [user, setUser] = useState(null);
+  // User comes from AuthContext (fetched ONCE at app boot) — no per-page /me call.
+  const { user, logout } = useContext(AuthContext);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -15,6 +17,26 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Stable callback: same function identity across renders, so the mount
+  // effect below can depend on it safely and will never re-run.
+  const fetchRooms = useCallback(async (signal) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rooms/my-rooms`,
+        signal ? { signal } : undefined
+      );
+      setRooms(response.data.rooms);
+    } catch (error) {
+      if (signal && error?.code === 'ERR_CANCELED') return;
+      console.error('Failed to fetch rooms:', error);
+      toast.error('Failed to load rooms');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch rooms exactly ONCE on mount. AbortController cancels the in-flight
+  // request if the page unmounts (avoids stale setState + duplicate bursts).
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -22,8 +44,9 @@ const Dashboard = () => {
       return;
     }
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    fetchUser();
-    fetchRooms();
+
+    const controller = new AbortController();
+    fetchRooms(controller.signal);
 
     // Handle window resize to close sidebar on larger screens
     const handleResize = () => {
@@ -33,34 +56,14 @@ const Dashboard = () => {
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`);
-      setUser(response.data);
-    } catch (error) {
-      localStorage.removeItem('token');
-      navigate('/login');
-    }
-  };
-
-  const fetchRooms = async () => {
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/rooms/my-rooms`);
-      setRooms(response.data.rooms);
-    } catch (error) {
-      console.error('Failed to fetch rooms:', error);
-      toast.error('Failed to load rooms');
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      controller.abort();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [fetchRooms, navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
+    logout();
     toast.success('Logged out successfully');
     navigate('/');
   };

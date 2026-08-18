@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { AuthContext } from '../context/AuthContext';
 
 
 const Room = () => {
@@ -16,7 +17,9 @@ const Room = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
-  const [user, setUser] = useState(null);
+  // User comes from AuthContext (fetched ONCE at app boot) — no per-page /me call.
+  const { user } = useContext(AuthContext);
+  const userRef = useRef(user);
   const [typingUsers, setTypingUsers] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
@@ -24,6 +27,59 @@ const Room = () => {
   const skipScrollRef = useRef(false);
   const [activeReactionMessage, setActiveReactionMessage] = useState(null);
   const [aiMode, setAiMode] = useState(false);
+
+  // NOTE: these MUST be declared above the INITIAL LOAD effect below, because
+  // they appear in its dependency array. A `const` referenced in a deps array
+  // is read during render (at the useEffect call site), so it cannot be in the
+  // temporal dead zone (declared later in the body) or it throws a
+  // ReferenceError: "Cannot access X before initialization".
+
+  // Stable + cancellable: fetches details once per room; the AbortController
+  // cleanup prevents stale setState when navigating away mid-request.
+  const fetchRoomDetails = useCallback(async (signal) => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/details`,
+        signal ? { signal } : undefined
+      );
+
+      setRoom({
+        ...res.data.room,
+        isAdmin: res.data.isAdmin
+      });
+
+      setMembers(res.data.room.members);
+
+    } catch (err) {
+      if (signal && err?.code === 'ERR_CANCELED') return;
+      if (err.response?.status === 403) {
+        toast.error('Not authorized');
+        navigate('/dashboard');
+      }
+    }
+  }, [roomId, navigate]);
+
+  // Stable + cancellable: fetches the message history once per room.
+  const fetchMessages = useCallback(async (signal) => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/messages`,
+        signal ? { signal } : undefined
+      );
+      setMessages(res.data.messages);
+    } catch (err) {
+      if (signal && err?.code === 'ERR_CANCELED') return;
+      console.error('Message fetch failed');
+    } finally {
+      setLoading(false);
+    }
+  }, [roomId]);
+
+  // Keep a live ref of the current user so socket listeners always see the
+  // latest id without tearing down/recreating the socket on every user change.
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // ===============================
   // INITIAL LOAD
@@ -38,12 +94,19 @@ const Room = () => {
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-    fetchUser();
-    fetchRoomDetails();
-    fetchMessages();
+    // Fetch room data exactly once per roomId. The AbortController cancels
+    // in-flight requests if the user navigates away (no stale setState, and
+    // no refetch churn from leaving/re-entering the route).
+    const controller = new AbortController();
+    fetchRoomDetails(controller.signal);
+    fetchMessages(controller.signal);
 
     const newSocket = io(`${import.meta.env.VITE_API_URL}/`, {
-      auth: { token }
+      auth: { token },
+      // ⚡ WebSocket-only: skips the HTTP polling handshake entirely so the
+      // network tab shows a single clean `websocket` upgrade with no
+      // `socket.io/?EIO=4&transport=polling` fallback spam.
+      transports: ['websocket']
     });
 
     setSocket(newSocket);
@@ -69,7 +132,7 @@ const Room = () => {
     });
 
     newSocket.on("user_typing", ({ userId, username }) => {
-      if (userId === user?._id) return;
+      if (userId === userRef.current?._id) return;
 
       setTypingUsers(prev => {
         if (prev.find(u => u.userId === userId)) return prev;
@@ -93,10 +156,11 @@ const Room = () => {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      controller.abort();
       newSocket.disconnect();
       window.removeEventListener('resize', handleResize);
     };
-  }, [roomId]);
+  }, [roomId, fetchRoomDetails, fetchMessages, navigate]);
 
   useEffect(() => {
     if (!skipScrollRef.current) {
@@ -104,58 +168,6 @@ const Room = () => {
     }
     skipScrollRef.current = false;
   }, [messages]);
-
-  // ===============================
-  // FETCH USER
-  // ===============================
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`);
-      setUser(res.data);
-    } catch (err) {
-      console.error('User fetch failed');
-    }
-  };
-
-  // ===============================
-  // FETCH ROOM DETAILS
-  // ===============================
-  const fetchRoomDetails = async () => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/details`
-      );
-
-      setRoom({
-        ...res.data.room,
-        isAdmin: res.data.isAdmin
-      });
-
-      setMembers(res.data.room.members);
-
-    } catch (err) {
-      if (err.response?.status === 403) {
-        toast.error('Not authorized');
-        navigate('/dashboard');
-      }
-    }
-  };
-
-  // ===============================
-  // FETCH MESSAGES
-  // ===============================
-  const fetchMessages = async () => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/messages`
-      );
-      setMessages(res.data.messages);
-    } catch (err) {
-      console.error('Message fetch failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ===============================
   // DELETE ROOM
@@ -486,12 +498,12 @@ const formatMessageWithLinks = (text) => {
           <div className="space-y-2">
             {members.map(member => (
               <div
-                key={member.user._id}
+                key={member.user?._id}
                 className="flex items-center justify-between p-3 rounded-lg bg-white/5"
               >
                 <div className="flex-1 min-w-0">
                   <span className="text-sm block truncate">
-                    {member.user.username}
+                    {member.user?.username}
                   </span>
                   {member.role === 'admin' && (
                     <span className="text-xs text-primary">
@@ -500,10 +512,10 @@ const formatMessageWithLinks = (text) => {
                   )}
                 </div>
 
-                {room?.isAdmin && member.user._id !== user?._id && (
+                {room?.isAdmin && member.user?._id !== user?._id && (
                   <button
                     onClick={() => {
-                      handleRemoveMember(member.user._id);
+                      handleRemoveMember(member.user?._id);
                       setSidebarOpen(false);
                     }}
                     className="text-red-400 text-xs hover:text-red-300 ml-2 flex-shrink-0"
@@ -561,12 +573,12 @@ const formatMessageWithLinks = (text) => {
           <div className="space-y-2">
             {members.map(member => (
               <div
-                key={member.user._id}
+                key={member.user?._id}
                 className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <span className="text-sm block truncate">
-                    {member.user.username}
+                    {member.user?.username}
                   </span>
                   {member.role === 'admin' && (
                     <span className="text-xs text-primary">
@@ -575,9 +587,9 @@ const formatMessageWithLinks = (text) => {
                   )}
                 </div>
 
-                {room?.isAdmin && member.user._id !== user?._id && (
+                {room?.isAdmin && member.user?._id !== user?._id && (
                   <button
-                    onClick={() => handleRemoveMember(member.user._id)}
+                    onClick={() => handleRemoveMember(member.user?._id)}
                     className="text-red-400 text-xs hover:text-red-300 ml-2 flex-shrink-0"
                   >
                     Remove
@@ -593,6 +605,25 @@ const formatMessageWithLinks = (text) => {
       <main className="md:ml-80 flex flex-col h-screen pt-16 md:pt-4">
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 space-y-4">
+          {/* ⚡ Skeleton loader while /messages is in flight (~321ms) so the
+              chat area never looks frozen/empty during the interview demo */}
+          {loading && (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className={`flex ${i % 2 ? 'justify-end' : 'justify-start'}`}>
+                  <div className="rounded-2xl p-4 bg-white/5 w-2/3 md:w-1/2 animate-pulse">
+                    {i % 2 === 0 && (
+                      <div className="h-2.5 bg-white/20 rounded mb-3" style={{ width: '30%' }} />
+                    )}
+                    <div className="h-2.5 bg-white/10 rounded mb-2" />
+                    <div className="h-2.5 bg-white/10 rounded mb-2" style={{ width: '80%' }} />
+                    <div className="h-2.5 bg-white/10 rounded" style={{ width: '55%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {messages.map((message, index) => {
 
   const currentDate = new Date(message.createdAt);

@@ -1,15 +1,21 @@
-import { useEffect, useState } from "react";
+import { useState, useContext } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const Settings = () => {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
+  // User comes from AuthContext (fetched ONCE at app boot) — no per-page /me call.
+  const { user, refreshUser, logout } = useContext(AuthContext);
 
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  // Lazy-initialize from context. Settings only mounts after ProtectedRoute has
+  // loaded the user, so `user` is already available here — no effect needed and
+  // no extra identity fetch. (After a profile update we call refreshUser(), and
+  // the fields already contain what the user typed.)
+  const [username, setUsername] = useState(() => user?.username || "");
+  const [email, setEmail] = useState(() => user?.email || "");
 
   const [emailOtp, setEmailOtp] = useState("");
   const [deleteOtp, setDeleteOtp] = useState("");
@@ -18,27 +24,6 @@ const Settings = () => {
   const [deleteOtpSent, setDeleteOtpSent] = useState(false);
 
   const getToken = () => localStorage.getItem("token");
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/auth/me`,
-        {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        }
-      );
-
-      setUser(res.data);
-      setUsername(res.data.username);
-      setEmail(res.data.email);
-    } catch {
-      toast.error("Failed to load user");
-    }
-  };
 
   // ================= USERNAME UPDATE =================
   const handleUsernameUpdate = async () => {
@@ -52,6 +37,8 @@ const Settings = () => {
       );
 
       toast.success("Username updated");
+      // Keep the shared identity in context current (single source of truth)
+      await refreshUser();
     } catch (err) {
       toast.error(err.response?.data?.message || "Update failed");
     }
@@ -92,7 +79,8 @@ const requestEmailOtp = async () => {
 
       toast.success("Email updated successfully");
       setEmailOtpSent(false);
-      fetchUser();
+      // Repopulate fields from the refreshed identity (context-driven)
+      await refreshUser();
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid OTP");
     }
@@ -128,7 +116,9 @@ const requestEmailOtp = async () => {
 
       toast.success("Account deleted");
 
-      localStorage.removeItem("token");
+      // Clear BOTH the token and the in-memory session so no page can render
+      // a stale logged-in state after deletion.
+      logout();
       navigate("/login");
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid OTP");
@@ -179,7 +169,7 @@ const requestEmailOtp = async () => {
               onClick={requestEmailOtp}
               className="btn-primary w-full mt-2"
             >
-              Send Email OTP
+              Verify New Email
             </button>
           ) : (
             <>

@@ -33,7 +33,10 @@ exports.registerUser = async (req, res) => {
         existingUser.otpExpires = otpExpiry;
         await existingUser.save();
 
-        await sendEmail(email, otp);
+        // ⚡ Fire-and-forget: don't block the response on Brevo round-trip
+        sendEmail(email, otp).catch((err) => {
+          console.error("OTP email failed (background):", err?.message || err);
+        });
 
         return res.json({
           message: "OTP re-sent. Please verify your email.",
@@ -54,7 +57,10 @@ exports.registerUser = async (req, res) => {
       isVerified: false,
     });
 
-    await sendEmail(email, otp);
+    // ⚡ Fire-and-forget: return instantly, deliver OTP in background
+    sendEmail(email, otp).catch((err) => {
+      console.error("OTP email failed (background):", err?.message || err);
+    });
 
     res.status(200).json({
       message: "OTP sent to email. Please verify.",
@@ -197,7 +203,10 @@ exports.forgotPassword = async (req, res) => {
 
     await user.save();
 
-    await sendOtpEmail(email, otp); // reuse existing email util
+    // ⚡ Fire-and-forget: return instantly, deliver OTP in background
+    sendOtpEmail(email, otp).catch((err) => {
+      console.error("Forgot-password OTP email failed (background):", err?.message || err);
+    });
 
     res.json({ message: "OTP sent to email" });
 
@@ -346,7 +355,10 @@ console.log("EMAIL_PASS exists:", process.env.EMAIL_PASS ? "YES" : "NO");
 
     await user.save();
 
-    await sendOtpEmail(newEmail, otp, "Email Change");
+    // ⚡ Fire-and-forget: don't block the response on the email round-trip
+    sendOtpEmail(newEmail, otp, "Email Change").catch((err) => {
+      console.error("Email-change OTP email failed (background):", err?.message || err);
+    });
 
     res.json({ message: "OTP sent to new email" });
 
@@ -403,7 +415,10 @@ exports.requestDeleteAccountOtp = async (req, res) => {
 
     await user.save();
 
-    await sendOtpEmail(user.email, otp, "Delete Account");
+    // ⚡ Fire-and-forget: don't block the response on the email round-trip
+    sendOtpEmail(user.email, otp, "Delete Account").catch((err) => {
+      console.error("Delete-account OTP email failed (background):", err?.message || err);
+    });
 
     res.json({ message: "Delete OTP sent" });
 

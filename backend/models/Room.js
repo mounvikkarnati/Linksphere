@@ -39,4 +39,8 @@ const roomSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// ⚡ LATENCY: index for `Room.find({ "members.user": userId })` used
+// by the dashboard ("my rooms") — avoids a full collection scan.
+roomSchema.index({ "members.user": 1 });
+
 module.exports = mongoose.model("Room", roomSchema);

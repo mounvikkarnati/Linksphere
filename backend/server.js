@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 const dotenv = require("dotenv");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -57,6 +58,8 @@ app.use(cors({
 }));
 
 app.use(express.json());
+// ⚡ LATENCY: gzip-compress all API responses (big win for message lists)
+app.use(compression());
 // Attach io to every request
 app.use((req, res, next) => {
   req.io = app.get("io");

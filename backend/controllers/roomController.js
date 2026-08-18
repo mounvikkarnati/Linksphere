@@ -47,14 +47,19 @@ exports.createRoom = async (req, res) => {
       ],
       expiresAt
     });
-    // Send room details email to admin
-await sendRoomDetailsEmail({
-  to: req.user.email,
-  roomName: name,
-  roomId: roomId,
-  password: password, // original password (not hashed)
-  expiresAt: expiresAt
-});
+    // Send room details email to admin in background (fire-and-forget).
+    // ⚡ Do NOT await this: Brevo SMTP round-trips take 500ms-2s and would
+    // block the user's response. The room is already created in the DB.
+    sendRoomDetailsEmail({
+      to: req.user.email,
+      roomName: name,
+      roomId: roomId,
+      password: password, // original password (not hashed)
+      expiresAt: expiresAt
+    }).catch((err) => {
+      console.error("Room details email failed (background):", err?.message || err);
+    });
+
     res.status(201).json({
       message: "Room created successfully",
       roomId: room.roomId
@@ -166,7 +171,13 @@ exports.getRoomDetails = async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    const member = room.members.find(
+    // ⚡ FIX (HTTP 500): when a member's user account has been deleted,
+    // populate() leaves `member.user` as null. Accessing `.user._id` below
+    // would throw `TypeError: Cannot read properties of null`, crashing the
+    // endpoint. Filter out dangling refs before any access.
+    const validMembers = (room.members || []).filter(m => m.user);
+
+    const member = validMembers.find(
       m => m.user._id.toString() === req.user._id.toString()
     );
 
@@ -178,10 +189,10 @@ exports.getRoomDetails = async (req, res) => {
       room.expiresAt && new Date() > room.expiresAt;
 
     res.json({
-      room,
+      room: { ...room.toObject(), members: validMembers },
       isAdmin: member.role === "admin",
       isExpired,
-      membersCount: room.members.length
+      membersCount: validMembers.length
     });
 
   } catch (error) {
@@ -202,11 +213,16 @@ exports.getMessages = async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
+    // ⚡ LIMIT history to the 100 most recent messages so the query stays
+    // fast no matter how large the chat grows. Compound index on
+    // { room, createdAt } keeps both the filter and sort index-backed.
     const messages = await Message.find({
       room: room._id
     })
       .populate("sender", "username")
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .then(msgs => msgs.reverse()); // newest-last, i.e. chronological order
 
     res.json({ messages });
 

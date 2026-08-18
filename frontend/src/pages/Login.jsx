@@ -27,7 +27,7 @@ export default function Login() {
         formData
       );
 
-      login(res.data.token); // store token via context
+      login(res.data.token, res.data.user); // store token + user via context
       navigate("/dashboard");
 
     } catch (err) {

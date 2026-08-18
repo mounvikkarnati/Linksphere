@@ -17,7 +17,7 @@ const sendOtpEmail = async (email, otp, purpose = "Verification") => {
   email: process.env.EMAIL_USER,
 },
 to: [{ email }],
-subject: `${purpose} – Verification Code`,
+subject: `${purpose} – Verification Code from LinkSphere Secure`,
 htmlContent: `
   <div style="margin:0; padding:0; background-color:#f3f4f6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
     

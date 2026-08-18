@@ -60,4 +60,9 @@ messageSchema.pre("validate", function () {
 
 });
 
+// ⚡ LATENCY: compound index so the hot chat-history query
+// (filter by room + sort by createdAt) is index-backed instead of
+// an in-memory sort over the entire room's messages.
+messageSchema.index({ room: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Message", messageSchema);
